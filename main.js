@@ -46,7 +46,8 @@ hands.setOptions({
 // results per frame
 hands.onResults((results) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawMarkingMenu(menu);
+
+    let activeSegment = -1;
 
     if (results.multiHandLandmarks.length > 0) {
         const landmarks = results.multiHandLandmarks[0];
@@ -56,8 +57,12 @@ hands.onResults((results) => {
         cursor.y = indexTip.y * canvas.height;
         cursor.visible = true;
 
+        activeSegment = getActiveSegment(menu, cursor);
+
         drawCursor(cursor.x, cursor.y);
     }
+
+    drawMarkingMenu(menu, activeSegment);
 });
 
 // start camera
@@ -78,7 +83,30 @@ function drawCursor(x, y) {
     ctx.fill();
 }
 
-function drawMarkingMenu(menu) {
+// draw a vector from menu center to cursor and get the angle of it to determine which segment the cursor is hovering on
+function getCursorAngle(menu, cursor) {
+    const dx = cursor.x - menu.x;
+    const dy = cursor.y - menu.y;
+
+    let angle = Math.atan2(dy, dx); // -PI .. PI
+
+    if (angle < 0) {
+        angle += Math.PI * 2;       // 0 .. 2PI
+    }
+
+    return angle;
+}
+
+// calculate which segment is hovered on based on the angle
+function getActiveSegment(menu, cursor) {
+    const angle = getCursorAngle(menu, cursor);
+    const angleStep = (Math.PI * 2) / menu.items.length;
+
+    return Math.floor(angle / angleStep);
+}
+
+
+function drawMarkingMenu(menu, activeIndex = -1) {
     const { x, y, radius, items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
 
@@ -89,12 +117,20 @@ function drawMarkingMenu(menu) {
         const startAngle = i * angleStep;
         const endAngle = startAngle + angleStep;
 
+        // highlight active segment by setting the fill color
+        if (i === activeIndex) {
+            ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
+        } else {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+        }
+
         // draw segment
         ctx.beginPath();
-        ctx.moveTo(x, y);                               // line starts in the middle
-        ctx.arc(x, y, radius, startAngle, endAngle);    // draw arc from startAngle to endAngle
-        ctx.closePath();                                // line back to the middle
-        ctx.stroke();
+        ctx.moveTo(x, y);                                   // line starts in the middle
+        ctx.arc(x, y, radius, startAngle, endAngle);        // draw arc from startAngle to endAngle
+        ctx.closePath();                                    // line back to the middle
+        ctx.fill();                                         // fill with background color
+        ctx.stroke();                                       // draw stroke
 
         // calculate label position
         const midAngle = startAngle + angleStep / 2;
@@ -106,8 +142,5 @@ function drawMarkingMenu(menu) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(items[i].label, labelX, labelY);
-
-        // ctx.fillStyle = isActive ? "rgba(255,255,255,0.2)" : "transparent";     // highlight of a segment
-
     }
 }
