@@ -99,6 +99,15 @@ function getCursorAngle(menu, cursor) {
 
 // calculate which segment is hovered on based on the angle
 function getActiveSegment(menu, cursor) {
+    const distance = getCursorDistance(menu, cursor);
+
+    const outerRadius = menu.radius;
+
+    // cursor not in menu
+    if (distance > outerRadius) {
+        return -1;
+    }
+
     const angle = getCursorAngle(menu, cursor);
     const angleStep = (Math.PI * 2) / menu.items.length;
 
@@ -120,8 +129,11 @@ function drawMarkingMenu(menu, activeIndex = -1) {
         // highlight active segment by setting the fill color
         if (i === activeIndex) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
+            // ctx.strokeStyle = "magenta";
+
         } else {
             ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+            // ctx.strokeStyle = "black";
         }
 
         // draw segment
@@ -143,4 +155,11 @@ function drawMarkingMenu(menu, activeIndex = -1) {
         ctx.textBaseline = "middle";
         ctx.fillText(items[i].label, labelX, labelY);
     }
+}
+
+// calculates distance from menu to cursor
+function getCursorDistance(menu, cursor) {
+    const dx = cursor.x - menu.x;
+    const dy = cursor.y - menu.y;
+    return Math.sqrt(dx * dx + dy * dy);
 }
