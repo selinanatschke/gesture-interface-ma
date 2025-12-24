@@ -9,6 +9,8 @@ const DWELL_DURATION = 3000;    // time for the dwell timer
 let dwellProgress = 0;          // 0..1
 let dwellStartTime = null;      // saves start time of dwell timer
 
+const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
+
 let cursor = {
     x: 0,
     y: 0,
@@ -25,6 +27,10 @@ const menu = {
         { label: "C" },
     ]
 };
+
+let hoverStartTimes = new Array(menu.items.length).fill(null);
+let hoverProgress = new Array(menu.items.length).fill(0);
+let hoverTriggered = new Array(menu.items.length).fill(false);
 
 // adapt canvas to window size
 function resize() {
@@ -78,10 +84,36 @@ hands.onResults((results) => {
         if (handDetected) {
             updateCursor(results);
             activeSegment = getActiveSegment(menu, cursor);
+            updateHoverFill(now, activeSegment);
         }
         drawMarkingMenu(menu, activeSegment);
     }
 });
+
+function updateHoverFill(now, activeIndex) {
+    for (let i = 0; i < menu.items.length; i++) {
+        if (i === activeIndex) {
+            if (hoverStartTimes[i] === null) {
+                hoverStartTimes[i] = now;
+                hoverTriggered[i] = false;
+            }
+
+            const elapsed = now - hoverStartTimes[i];
+            hoverProgress[i] = Math.min(elapsed / HOVER_FILL_DURATION, 1);
+
+            if (hoverProgress[i] >= 1 && !hoverTriggered[i]) {
+                hoverTriggered[i] = true;
+                console.log("Segment selected:", menu.items[i].label);
+                // todo function
+            }
+        } else {
+            // not in segment anymore -> reset
+            hoverStartTimes[i] = null;
+            hoverProgress[i] = 0;
+            hoverTriggered[i] = false;
+        }
+    }
+}
 
 function resetTimers(){
     idleStartTime = null;
@@ -211,6 +243,32 @@ function drawMarkingMenu(menu, activeIndex = -1) {
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(items[i].label, labelX, labelY);
+
+        // hover fill from left to right
+        const p = hoverProgress[i] || 0;
+        if (p > 0) {
+            ctx.save();     // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
+
+            // create segment-path new and set as a clip
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.arc(x, y, radius, startAngle, endAngle);
+            ctx.closePath();
+            ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
+
+            // uses bounding box of segment to draw a L->R rectangle (bounding box of circle is used as a simple solution)
+            // note: since circle is for whole menu, this might have a delay for the segments that are on the right side) (maybe fix later)
+            const left = x - radius;
+            const top = y - radius;
+            const width = radius * 2 * p;
+            const height = radius * 2;
+
+            // darker color for dwell time overlay
+            ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+            ctx.fillRect(left, top, width, height);
+
+            ctx.restore();  // back to state that we saved to stack
+        }
     }
     ctx.globalAlpha = 1;    // make sure dwell timer is drawn with opacity 1 afterwards
 }
