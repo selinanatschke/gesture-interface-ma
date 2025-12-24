@@ -22,15 +22,38 @@ const menu = {
     y: 0,
     radius: 200,
     items: [
-        { label: "A" },
-        { label: "B" },
-        { label: "C" },
+        {
+            label: "A",
+            subItems: [
+                { label: "A1" },
+                { label: "A2" },
+                { label: "A3" }
+            ]
+        },
+        {
+            label: "B",
+            subItems: [
+                { label: "B1" },
+                { label: "B2" },
+            ]
+        },
+        {
+            label: "C",
+            subItems: [
+                { label: "C1" },
+                { label: "C2" },
+                { label: "C3" }
+            ]
+        }
     ]
 };
 
 let hoverStartTimes = new Array(menu.items.length).fill(null);
 let hoverProgress = new Array(menu.items.length).fill(0);
 let hoverTriggered = new Array(menu.items.length).fill(false);
+
+let activeMainIndex = null;   // which main segment is selected
+let activeSubIndex = null;    // which sub segment is selected
 
 // adapt canvas to window size
 function resize() {
@@ -88,11 +111,36 @@ hands.onResults((results) => {
         }
         drawMarkingMenu(menu, activeSegment);
     }
+
+    updateSubMenuState(handDetected, activeSegment)
 });
 
+// close submenus only if cursor is neither in menu nor in submenu
+function updateSubMenuState(handDetected, activeSegment){
+    const inMainMenu = activeSegment !== -1;
+    const inSubMenu = activeMainIndex !== null && isCursorInSubMenuRing(menu, cursor);
+    if (!inMainMenu && !inSubMenu) {
+        activeMainIndex = null;
+    }
+
+    // highlight submenu
+    if (handDetected && activeMainIndex !== null) {
+        activeSubIndex = getActiveSubSegment(menu, cursor, activeMainIndex);
+    } else {
+        activeSubIndex = null;
+    }
+
+    // if we switch main menus -> also update submenu
+    if (activeSegment !== -1 && activeSegment !== activeMainIndex) {
+        activeMainIndex = null;
+        activeSubIndex = null;
+    }
+}
+
+// calculates dwell times on hovering a menu item
 function updateHoverFill(now, activeIndex) {
     for (let i = 0; i < menu.items.length; i++) {
-        if (i === activeIndex) {
+        if (i === activeIndex && activeMainIndex == null) {     // start fill animation if cursor is inside but only if submenu is not already open
             if (hoverStartTimes[i] === null) {
                 hoverStartTimes[i] = now;
                 hoverTriggered[i] = false;
@@ -104,7 +152,7 @@ function updateHoverFill(now, activeIndex) {
             if (hoverProgress[i] >= 1 && !hoverTriggered[i]) {
                 hoverTriggered[i] = true;
                 console.log("Segment selected:", menu.items[i].label);
-                // todo function
+                activeMainIndex = i;
             }
         } else {
             // not in segment anymore -> reset
@@ -115,6 +163,7 @@ function updateHoverFill(now, activeIndex) {
     }
 }
 
+// resets timers if hand was recognized
 function resetTimers(){
     idleStartTime = null;
     dwellStartTime = null;
@@ -202,6 +251,29 @@ function getActiveSegment(menu, cursor) {
     return Math.floor(angle / angleStep);
 }
 
+// calculates active subsegment by angle and distance of cursor to the center
+function getActiveSubSegment(menu, cursor, mainIndex) {
+    if (mainIndex === null) return -1;
+
+    const distance = getCursorDistance(menu, cursor);
+    const inner = menu.radius;
+    const outer = menu.radius + 80;
+
+    if (distance < inner || distance > outer) return -1;
+
+    const angle = getCursorAngle(menu, cursor);
+
+    const angleStep = (Math.PI * 2) / menu.items.length;
+    const startAngle = mainIndex * angleStep;
+    const endAngle = startAngle + angleStep;
+
+    if (angle < startAngle || angle > endAngle) return -1;
+
+    const subItems = menu.items[mainIndex].subItems;
+    const subStep = (endAngle - startAngle) / subItems.length;
+
+    return Math.floor((angle - startAngle) / subStep);
+}
 
 function drawMarkingMenu(menu, activeIndex = -1) {
     const { x, y, radius, items } = menu;
@@ -215,11 +287,12 @@ function drawMarkingMenu(menu, activeIndex = -1) {
         const startAngle = i * angleStep;
         const endAngle = startAngle + angleStep;
 
-        // highlight active segment by setting the fill color
-        if (i === activeIndex) {
+        // highlight active segment by setting the fill color AND highlight main segment if cursor is in submenu
+        const cursorInSubMenu = activeMainIndex !== null && isCursorInSubMenuRing(menu, cursor); // calculate if cursor is in submenu
+        const isMainHighlighted = i === activeIndex || (cursorInSubMenu && i === activeMainIndex); // highlight if: normal hover OR cursor is in submenu
+        if (isMainHighlighted) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
             // ctx.strokeStyle = "magenta";
-
         } else {
             ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
             // ctx.strokeStyle = "black";
@@ -245,8 +318,8 @@ function drawMarkingMenu(menu, activeIndex = -1) {
         ctx.fillText(items[i].label, labelX, labelY);
 
         // hover fill from left to right
-        const p = hoverProgress[i] || 0;
-        if (p > 0) {
+        const progress = hoverProgress[i] || 0;
+        if (progress > 0) {
             ctx.save();     // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
 
             // create segment-path new and set as a clip
@@ -256,20 +329,25 @@ function drawMarkingMenu(menu, activeIndex = -1) {
             ctx.closePath();
             ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
 
-            // uses bounding box of segment to draw a L->R rectangle (bounding box of circle is used as a simple solution)
-            // note: since circle is for whole menu, this might have a delay for the segments that are on the right side) (maybe fix later)
-            const left = x - radius;
-            const top = y - radius;
-            const width = radius * 2 * p;
-            const height = radius * 2;
-
-            // darker color for dwell time overlay
+            // draw dwell fill only for hovered segment (angle based)
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            const fillEndAngle = startAngle + (endAngle - startAngle) * progress;
+            ctx.arc(x, y, radius, startAngle, fillEndAngle);
+            ctx.closePath();
             ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-            ctx.fillRect(left, top, width, height);
+            ctx.fill();
 
-            ctx.restore();  // back to state that we saved to stack
+            // back to state that we saved to stack
+            ctx.restore();
         }
     }
+
+    // draw submenu if main segment was selected
+    if (activeMainIndex !== null) {
+        drawSubMenu(activeMainIndex);
+    }
+
     ctx.globalAlpha = 1;    // make sure dwell timer is drawn with opacity 1 afterwards
 }
 
@@ -301,4 +379,74 @@ function drawDwellRing(progress) {
     ctx.beginPath();
     ctx.arc(x, y, radius, startAngle, endAngle);
     ctx.stroke();
+}
+
+// draw border and fill color for submenu segments
+function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
+    ctx.beginPath();
+
+    // outer arc
+    ctx.arc(x, y, outerR, startAngle, endAngle);
+
+    // inner arc
+    ctx.arc(x, y, innerR, endAngle, startAngle, true);
+
+    ctx.closePath();
+}
+
+// calculates angles and radius for submenu + draws them
+function drawSubMenu(mainIndex) {
+    const subItems = menu.items[mainIndex].subItems;
+    if (!subItems) return;
+
+    const angleStep = (Math.PI * 2) / menu.items.length;
+
+    const startAngle = mainIndex * angleStep;
+    const endAngle = startAngle + angleStep;
+
+    const innerRadius = menu.radius;
+    const outerRadius = menu.radius + 80;
+
+    const subAngleStep = (endAngle - startAngle) / subItems.length;
+
+    for (let i = 0; i < subItems.length; i++) {
+        const a0 = startAngle + i * subAngleStep;
+        const a1 = a0 + subAngleStep;
+
+        drawRingSegment(
+            menu.x,
+            menu.y,
+            innerRadius,
+            outerRadius,
+            a0,
+            a1
+        );
+
+        ctx.stroke();
+
+        // label
+        const mid = (a0 + a1) / 2;
+        const r = (innerRadius + outerRadius) / 2;
+
+        ctx.fillStyle = "black";
+        ctx.fillText(
+            subItems[i].label,
+            menu.x + Math.cos(mid) * r,
+            menu.y + Math.sin(mid) * r
+        );
+
+        // hihglight active sub-segment
+        if (i === activeSubIndex) {
+            ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
+            ctx.fill();
+        }
+    }
+}
+
+function isCursorInSubMenuRing(menu, cursor) {
+    const distance = getCursorDistance(menu, cursor);
+    const inner = menu.radius;
+    const outer = menu.radius + 80; // same as submenu
+
+    return distance >= inner && distance <= outer;
 }
