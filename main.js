@@ -10,6 +10,7 @@ let dwellProgress = 0;          // 0..1
 let dwellStartTime = null;      // saves start time of dwell timer
 
 const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
+const SUB_HOVER_DURATION = 3000;
 
 let cursor = {
     x: 0,
@@ -48,12 +49,19 @@ const menu = {
     ]
 };
 
+// for dwell timer of main menu selection
 let hoverStartTimes = new Array(menu.items.length).fill(null);
 let hoverProgress = new Array(menu.items.length).fill(0);
 let hoverTriggered = new Array(menu.items.length).fill(false);
 
+// for dwell timer of sub menu selection
+let subHoverStartTime = null;
+let subHoverProgress = 0;
+let subHoverTriggered = false;
+
 let activeMainIndex = null;   // which main segment is selected
 let activeSubIndex = null;    // which sub segment is selected
+let previousSubIndex = null;  // which sub segment was selected in the last frame
 
 // adapt canvas to window size
 function resize() {
@@ -113,6 +121,7 @@ hands.onResults((results) => {
     }
 
     updateSubMenuState(handDetected, activeSegment)
+    updateSubHover(now)
 });
 
 // close submenus only if cursor is neither in menu nor in submenu
@@ -121,6 +130,7 @@ function updateSubMenuState(handDetected, activeSegment){
     const inSubMenu = activeMainIndex !== null && isCursorInSubMenuRing(menu, cursor);
     if (!inMainMenu && !inSubMenu) {
         activeMainIndex = null;
+        activeSubIndex = null;
     }
 
     // highlight submenu
@@ -135,6 +145,14 @@ function updateSubMenuState(handDetected, activeSegment){
         activeMainIndex = null;
         activeSubIndex = null;
     }
+
+    // reset submenu timers if subsegment has changed (previous = previous frame)
+    if (activeSubIndex !== previousSubIndex) {
+        subHoverStartTime = null;
+        subHoverProgress = 0;
+        subHoverTriggered = false;
+    }
+    previousSubIndex = activeSubIndex;
 }
 
 // calculates dwell times on hovering a menu item
@@ -439,6 +457,22 @@ function drawSubMenu(mainIndex) {
         if (i === activeSubIndex) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
             ctx.fill();
+
+            // dwell fill (radial)
+            if (subHoverProgress > 0) {
+                ctx.beginPath();
+                ctx.moveTo(menu.x, menu.y);
+
+                const fillEnd =
+                    a0 + (a1 - a0) * subHoverProgress;
+
+                ctx.arc(menu.x, menu.y, outerRadius, a0, fillEnd);
+                ctx.arc(menu.x, menu.y, innerRadius, fillEnd, a0, true);
+                ctx.closePath();
+
+                ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+                ctx.fill();
+            }
         }
     }
 }
@@ -450,3 +484,27 @@ function isCursorInSubMenuRing(menu, cursor) {
 
     return distance >= inner && distance <= outer;
 }
+
+function updateSubHover(now) {
+    if (activeMainIndex === null || activeSubIndex === null) {
+        subHoverStartTime = null;
+        subHoverProgress = 0;
+        subHoverTriggered = false;
+        return;
+    }
+
+    if (subHoverStartTime === null) {
+        subHoverStartTime = now;
+        subHoverTriggered = false;
+    }
+
+    const elapsed = now - subHoverStartTime;
+    subHoverProgress = Math.min(elapsed / SUB_HOVER_DURATION, 1);
+
+    if (subHoverProgress >= 1 && !subHoverTriggered) {
+        subHoverTriggered = true;
+        const label = menu.items[activeMainIndex].subItems[activeSubIndex].label;
+        console.log("Sub selected:", label);
+    }
+}
+
