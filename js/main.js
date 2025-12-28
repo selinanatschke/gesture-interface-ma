@@ -1,6 +1,7 @@
 import { dwellProgress, resetTimers, updateIdle, updateDwell, drawDwellRing } from "./timings.js";
-import { menu, getActiveSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
+import { getActiveSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
 import { updateCursor } from "./cursor.js";
+import { menu } from "./menu.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");

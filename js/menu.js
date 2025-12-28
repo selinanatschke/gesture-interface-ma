@@ -2,36 +2,8 @@ import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
 import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
 
-export const menu = {
-    x: 0,       // later menu.x = cursor.x to set menu where cursor appears
-    y: 0,
-    radius: 200,
-    items: [
-        {
-            label: "A",
-            subItems: [
-                { label: "A1" },
-                { label: "A2" },
-                { label: "A3" }
-            ]
-        },
-        {
-            label: "B",
-            subItems: [
-                { label: "B1" },
-                { label: "B2" },
-            ]
-        },
-        {
-            label: "C",
-            subItems: [
-                { label: "C1" },
-                { label: "C2" },
-                { label: "C3" }
-            ]
-        }
-    ]
-};
+const response = await fetch("./menu.json");
+export const menu = await response.json();
 
 let activeMainIndex = null;   // which main segment is selected
 let activeSubIndex = null;    // which sub segment is selected
@@ -218,8 +190,10 @@ export function updateSubHover(now) {
 
     if (subHoverProgress >= 1 && !subHoverTriggered) {
         subHoverTriggered = true;
-        const label = menu.items[activeMainIndex].subItems[activeSubIndex].label;
-        console.log("Sub selected:", label);
+        const item = menu.items[activeMainIndex].subItems[activeSubIndex];
+        if (item.action) {
+            handleMenuAction(item.action);
+        }
     }
 }
 
@@ -326,4 +300,15 @@ function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
     ctx.arc(x, y, outerR, startAngle, endAngle);                    // outer arc
     ctx.arc(x, y, innerR, endAngle, startAngle, true);   // inner arc
     ctx.closePath();
+}
+
+function handleMenuAction(action) {
+    switch (action) {
+        case "open_slider":
+            console.log("Open slider:", action);
+            break;
+
+        default:
+            console.warn("Unknown action type", action);
+    }
 }
