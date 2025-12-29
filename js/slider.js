@@ -1,16 +1,25 @@
 import { ctx } from "./main.js";
 import { menu } from "./menu.js";
+import { isPinched, updateIsPinched } from "./gestures.js";
+import { getCursorDistance } from "./cursor.js";
 
 let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
 export let sliderVisible = false;
+export let sliderFaded = false;
+
+// positions for tracking movement while pinched
+let lastHandPositionX = null;
+let lastHandPositionY = null;
 
 // load image
 const handImg = new Image();
 
 export function drawSliderCanvas() {
-    if (!sliderConfig) return;
+    if (!sliderConfig || !sliderVisible) return;
+
+    if (sliderFaded) ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
@@ -18,6 +27,7 @@ export function drawSliderCanvas() {
     } else {
         drawHorizontalSlider();
     }
+    ctx.globalAlpha = 1;
 }
 
 function drawVerticalSlider() {
@@ -135,7 +145,70 @@ export function showSlider(type) {
     }
 }
 
-// TODO: use
+// modify slider by pinching and dragging in a certain direction
+export function updateSliderValueFromHand(results) {
+    // only accept modification if slider is visible and hand is pinched
+    if (!isPinched) {
+        lastHandPositionX = null;
+        lastHandPositionY = null;
+        return;
+    }
+
+    const indexTip = results.multiHandLandmarks[0][8];   // steering point
+
+    // initialize
+    if (lastHandPositionX === null || lastHandPositionY === null) {
+        lastHandPositionX = indexTip.x;
+        lastHandPositionY = indexTip.y;
+        return;
+    }
+
+    // calculate movement (negative, because y grows downwards)
+    const dx = lastHandPositionX - indexTip.x;
+    const dy = lastHandPositionY - indexTip.y;
+
+    lastHandPositionX = indexTip.x;
+    lastHandPositionY = indexTip.y;
+
+    // speed/sensitivity
+    const speed = 2.0;
+
+    if (sliderConfig.orientation === "vertical") {
+        sliderValue += dy * speed;
+    } else {
+        sliderValue += dx * speed;
+    }
+
+    // limit values
+    sliderValue = Math.min(1, Math.max(0, sliderValue));
+}
+
+// updates if curosr is in menu or in slider if slider is opened
+export function updateSliderFaded() {
+    if (!sliderVisible) {
+        sliderFaded = false;
+        return;
+    }
+
+    // cursor back in menu?
+    if (getCursorDistance() < menu["radius"] + 60 && !isPinched) {
+        sliderFaded = true;
+    } else {
+        sliderFaded = false;
+    }
+}
+
 export function hideSlider() {
     sliderVisible = false;
+}
+
+// updates slider faded state, AND if slider is visible: updates pinch state + update slider value
+export function updateSlider(results){
+    updateSliderFaded();
+
+    if (sliderVisible && !sliderFaded) {
+        updateIsPinched(results);
+        updateSliderValueFromHand(results);
+    }
+
 }

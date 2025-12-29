@@ -1,8 +1,8 @@
 import { dwellProgress, resetTimers, updateIdle, updateDwell, drawDwellRing } from "./timings.js";
-import { getActiveSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
+import { getActiveMainSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
-import { drawSliderCanvas } from "./slider.js";
+import { drawSliderCanvas, updateSlider,} from "./slider.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -36,7 +36,7 @@ hands.setOptions({
 hands.onResults((results) => {
     const now = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let activeSegment = -1;
+    let activeMainSegment = -1;
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
@@ -59,17 +59,18 @@ hands.onResults((results) => {
     if (dwellProgress < 1) {
         if (handDetected) {
             updateCursor(results);
-            activeSegment = getActiveSegment();
-            updateHoverFill(now, activeSegment);
+            updateSlider(results);
+            activeMainSegment = getActiveMainSegment();
+            updateHoverFill(now, activeMainSegment);
+            updateSubHover(now)
         }
-        drawMarkingMenu(activeSegment);
+        drawMarkingMenu(activeMainSegment);
 
         // if slider data is available, this draws the slider
         drawSliderCanvas();
     }
 
-    updateSubMenuState(handDetected, activeSegment)
-    updateSubHover(now)
+    updateSubMenuState(handDetected, activeMainSegment)
 });
 
 // start camera

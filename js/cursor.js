@@ -1,5 +1,6 @@
 import { ctx } from "./main.js";
 import {sliderVisible} from "./slider.js";
+import { menu } from "./menu.js"
 
 export let cursor = {
     x: 0,
@@ -30,14 +31,14 @@ function drawCursor(x, y) {
 }
 
 // calculates distance from menu to cursor
-export function getCursorDistance(menu, cursor) {
+export function getCursorDistance() {
     const dx = cursor.x - menu.x;
     const dy = cursor.y - menu.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
 // draw a vector from menu center to cursor and get the angle of it to determine which segment the cursor is hovering on
-export function getCursorAngle(menu, cursor) {
+export function getCursorAngle() {
     const dx = cursor.x - menu.x;
     const dy = cursor.y - menu.y;
 
