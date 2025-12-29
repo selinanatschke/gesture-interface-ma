@@ -1,4 +1,5 @@
 import { ctx } from "./main.js";
+import {sliderVisible} from "./slider.js";
 
 export let cursor = {
     x: 0,
@@ -19,10 +20,13 @@ export function updateCursor(results){
 }
 
 function drawCursor(x, y) {
+    if (sliderVisible) ctx.globalAlpha = 0.5;
+
     ctx.fillStyle = "purple";
     ctx.beginPath();
-    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();
+    ctx.globalAlpha = 1;
 }
 
 // calculates distance from menu to cursor

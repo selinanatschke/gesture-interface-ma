@@ -1,6 +1,7 @@
 import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
 import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
+import { showSlider, sliderVisible } from "./slider.js";
 
 const response = await fetch("./menu.json");
 export const menu = await response.json();
@@ -26,9 +27,13 @@ export function drawMarkingMenu(activeIndex = -1) {
     const { x, y, radius, items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
 
-    ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1;     // everything drawn after this is drawn with opacity 0.5
+    if(sliderVisible) {
+        ctx.globalAlpha = 0.5;                          // if slider is visible, menu should be greyed out
+    } else {
+        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1; // everything drawn after this is drawn with opacity 0.5
+    }
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2;
 
     for (let i = 0; i < items.length; i++) {            // loop for each segment
         const startAngle = i * angleStep;
@@ -36,7 +41,7 @@ export function drawMarkingMenu(activeIndex = -1) {
 
         // highlight active segment by setting the fill color AND highlight main segment if cursor is in submenu
         const cursorInSubMenu = activeMainIndex !== null && isCursorInSubMenuRing(menu, cursor); // calculate if cursor is in submenu
-        const isMainHighlighted = i === activeIndex || (cursorInSubMenu && i === activeMainIndex); // highlight if: normal hover OR cursor is in submenu
+        const isMainHighlighted = (i === activeIndex || (cursorInSubMenu && i === activeMainIndex)) || sliderVisible && i === activeMainIndex ;  // highlight if: (normal hover OR cursor is in submenu) OR slider is visible AND it was done by selecting its submenu
         if (isMainHighlighted) {
             ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
             // ctx.strokeStyle = "magenta";
@@ -59,7 +64,7 @@ export function drawMarkingMenu(activeIndex = -1) {
         const labelY = y + Math.sin(midAngle) * radius * 0.6;
 
         ctx.fillStyle = "black";                        // color of label
-        ctx.font = "32px sans-serif";
+        ctx.font = "24px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(items[i].label, labelX, labelY);
@@ -98,8 +103,10 @@ export function drawMarkingMenu(activeIndex = -1) {
     ctx.globalAlpha = 1;    // make sure dwell timer is drawn with opacity 1 afterwards
 }
 
-// close submenus only if cursor is neither in menu nor in submenu
+// close submenus only if cursor is neither in menu nor in submenu (nor slider is opened)
 export function updateSubMenuState(handDetected, activeSegment){
+    if (sliderVisible) return;      // makes sure that if the slider is open, the selected submenu remains open
+
     const inMainMenu = activeSegment !== -1;
     const inSubMenu = activeMainIndex !== null && isCursorInSubMenuRing(menu, cursor);
     if (!inMainMenu && !inSubMenu) {
@@ -133,7 +140,7 @@ export function updateSubMenuState(handDetected, activeSegment){
 export function getActiveSegment() {
     const distance = getCursorDistance(menu, cursor);
 
-    const outerRadius = menu.radius;
+    const outerRadius = menu["radius"];
 
     // cursor not in menu
     if (distance > outerRadius) {
@@ -199,8 +206,8 @@ export function updateSubHover(now) {
 
 function isCursorInSubMenuRing(menu, cursor) {
     const distance = getCursorDistance(menu, cursor);
-    const inner = menu.radius;
-    const outer = menu.radius + 80; // same as submenu
+    const inner = menu["radius"];
+    const outer = menu["radius"] + 80; // same as submenu
 
     return distance >= inner && distance <= outer;
 }
@@ -210,8 +217,8 @@ function getActiveSubSegment(menu, cursor, mainIndex) {
     if (mainIndex === null) return -1;
 
     const distance = getCursorDistance(menu, cursor);
-    const inner = menu.radius;
-    const outer = menu.radius + 80;
+    const inner = menu["radius"];
+    const outer = menu["radius"] + 80;
 
     if (distance < inner || distance > outer) return -1;
 
@@ -239,8 +246,8 @@ function drawSubMenu(mainIndex) {
     const startAngle = mainIndex * angleStep;
     const endAngle = startAngle + angleStep;
 
-    const innerRadius = menu.radius;
-    const outerRadius = menu.radius + 80;
+    const innerRadius = menu["radius"];
+    const outerRadius = menu["radius"] + 60;
 
     const subAngleStep = (endAngle - startAngle) / subItems.length;
 
@@ -302,10 +309,12 @@ function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
     ctx.closePath();
 }
 
+// handles actions of menu selection
+// todo not only for submenus!
 function handleMenuAction(action) {
-    switch (action) {
+    switch (action.name) {
         case "open_slider":
-            console.log("Open slider:", action);
+            showSlider(action.type);    // enables slider
             break;
 
         default:

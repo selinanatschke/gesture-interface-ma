@@ -2,6 +2,7 @@ import { dwellProgress, resetTimers, updateIdle, updateDwell, drawDwellRing } fr
 import { getActiveSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
+import { drawSliderCanvas } from "./slider.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -62,6 +63,9 @@ hands.onResults((results) => {
             updateHoverFill(now, activeSegment);
         }
         drawMarkingMenu(activeSegment);
+
+        // if slider data is available, this draws the slider
+        drawSliderCanvas();
     }
 
     updateSubMenuState(handDetected, activeSegment)

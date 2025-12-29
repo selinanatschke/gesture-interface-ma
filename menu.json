@@ -1,15 +1,30 @@
 {
-  "radius": 200,
+  "radius": 120,
   "items": [
     {
-      "label": "A",
+      "label": "H, V, L einstellen",
       "subItems": [
         {
-          "label": "A1",
-          "action": "open_slider"
+          "label": "Lautstärke",
+          "action": {
+            "name": "open_slider",
+            "type": "volume"
+          }
         },
-        { "label": "A2" },
-        { "label": "A3" }
+        {
+          "label": "Helligkeit",
+          "action": {
+            "name": "open_slider",
+            "type": "brightness"
+          }
+        },
+        {
+          "label": "Vibration",
+          "action": {
+            "name": "open_slider",
+            "type": "vibration"
+          }
+        }
       ]
     },
     {
