@@ -90,4 +90,5 @@ const camera = new Camera(video, {
 });
 
 camera.start();
+video.style.display = "none";
 
