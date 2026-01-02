@@ -3,7 +3,6 @@ import {
     drawMarkingMenu,
     updateSubMenuState,
     updateHoverFill,
-    updateSubHover,
     getActiveMainSegment,
     menuState
 } from "./menu.js";
@@ -68,8 +67,8 @@ hands.onResults((results) => {
             updateCursor(results);
             updateSlider(results);
             menuState.hoverPath[0] = getActiveMainSegment();
-            updateHoverFill(now);
-            updateSubHover(now)
+            updateHoverFill(now, 0);    // main manu
+            updateHoverFill(now, 1);    // sub menu
         }
         drawMarkingMenu();
 

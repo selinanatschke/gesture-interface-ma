@@ -11,21 +11,12 @@ export let menuState = {
     hoverPath: [],          // ([1,0] e.g. menu.items[1].subItems[0]) array of segments whose cursor hovers over segment (can be either one if in main menu or 2 for main element + its sub element, ...)
 }
 
-let previousMainSegment = null;  // which sub segment was selected in the last frame
-let previousSubSegment = null;  // which sub segment was selected in the last frame
+const hoverState = [
+    { startTime: null, progress: 0, triggered: false, previous: null }, // main
+    { startTime: null, progress: 0, triggered: false, previous: null }  // sub
+];
 
 const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
-const SUB_HOVER_DURATION = 3000;
-
-// for dwell timer of main menu selection
-let hoverStartTime = null;
-let hoverProgress = 0;
-let hoverTriggered = false;
-
-// for dwell timer of sub menu selection
-let subHoverStartTime = null;
-let subHoverProgress = 0;
-let subHoverTriggered = false;
 
 export function drawMarkingMenu() {
     const { x, y, radius, items } = menu;
@@ -116,7 +107,7 @@ function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
     const activeMainSegment = menuState.hoverPath[0];
 
     // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
-    if (hoverProgress === 0 || i !== activeMainSegment || i === menuState.selectedPath[0]) return;
+    if (hoverState[0].progress === 0 || i !== activeMainSegment || i === menuState.selectedPath[0]) return;
 
     // create segment-path new and set as a clip
     ctx.save();             // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
@@ -129,7 +120,7 @@ function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
     // draw dwell fill only for hovered segment (angle based)
     ctx.beginPath();
     ctx.moveTo(x, y);
-    const fillEndAngle = startAngle + (endAngle - startAngle) * hoverProgress;
+    const fillEndAngle = startAngle + (endAngle - startAngle) * hoverState[0].progress;
     ctx.arc(x, y, radius, startAngle, fillEndAngle);
     ctx.closePath();
     ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
@@ -166,13 +157,13 @@ export function updateSubMenuState(handDetected){
     }
 
     // reset submenu timers if subsegment has changed (previous = previous frame)
-    if (menuState.hoverPath[1] !== previousSubSegment) {
-        subHoverStartTime = null;
-        subHoverProgress = 0;
-        subHoverTriggered = false;
+    if (menuState.hoverPath[1] !== hoverState[1].previous) {
+        hoverState[1].startTime = null;
+        hoverState[1].progress = 0;
+        hoverState[1].triggered = false;
     }
-    previousSubSegment = menuState.hoverPath[1];
-    previousMainSegment = menuState.hoverPath[0];
+    hoverState[1].previous = menuState.hoverPath[1];
+    hoverState[0].previous = menuState.hoverPath[0];
 }
 
 // calculate which segment is hovered on based on the angle
@@ -198,72 +189,51 @@ export function getActiveMainSegment() {
     }
 }
 
-// calculates dwell times on hovering a menu item
-export function updateHoverFill(now) {
+/** calculates dwell times on hovering a menu item
+ * if menu item is hovered & slider is not in interactive mode -> start dwell -> if completed -> do action
+ * @param now
+ * @param level : this decides if main menu or x. level (submenu) is opened
+ **/
+export function updateHoverFill(now, level) {
     // prevent dwell interaction while slider is used
     if (sliderVisible && !sliderFaded) return;
+    const hoveredItem = menuState.hoverPath[level];
 
-    const activeMainSegment = menuState.hoverPath[0];
+    const needsReset = level === 0 ?
+        // level 0: nothing hovered OR selection already made OR switch of hovered segment -> reset
+        menuStateItemIsNotSet(hoveredItem) || hoveredItem !== hoverState[0].previous :
+        // level 1: if no main menu item was selected OR no submenu item is hovered, reset all dwell timers and return OR the slider is visible and cursor is in slider -> prevents accidental selection of other item while using the slider
+        menuStateItemIsNotSet(menuState.selectedPath[0]) || menuStateItemIsNotSet(menuState.hoverPath[1]) || sliderVisible && !sliderFaded
 
-    // nothing hovered OR selection already made OR switch of hovered segment -> reset
-    if (menuStateItemIsNotSet(activeMainSegment) || activeMainSegment !== previousMainSegment) {
-        hoverStartTime = null;
-        hoverProgress = 0;
-        hoverTriggered = false;
-    }
-
-    // initialize timer if no timer was set
-    if (hoverStartTime === null) {
-        hoverStartTime = now;
-        hoverTriggered = false;
-    }
-
-    // update progress
-    const elapsed = now - hoverStartTime;
-    hoverProgress = Math.min(elapsed / HOVER_FILL_DURATION, 1);
-
-    // trigger after dwell threshold
-    if (hoverProgress >= 1 && !hoverTriggered) {
-        hoverTriggered = true;
-        menuState.selectedPath[0] = menuState.hoverPath[0];
-
-        if (sliderVisible) {
-            hideSlider();
-        }
-    }
-}
-
-/** If submenu item is hovered & slider is not in interactive mode -> start dwell -> if completed -> do action
- *
- * @param now
- */
-export function updateSubHover(now) {
-    // if no main menu item was selected OR no submenu item is hovered, reset all dwell timers and return OR the slider is visible and cursor is in slider -> prevents accidental selection of other item while using the slider
-    if(menuStateItemIsNotSet(menuState.selectedPath[0]) || menuStateItemIsNotSet(menuState.hoverPath[1]) || sliderVisible && !sliderFaded) {
-        subHoverStartTime = null;
-        subHoverProgress = 0;
-        subHoverTriggered = false;
+    if (needsReset) {
+        hoverState[level].startTime = null;
+        hoverState[level].progress = 0;
+        hoverState[level].triggered= false;
         return;
     }
 
-    // initialize dwell timer -> if no start time was set, set one
-    if (subHoverStartTime === null) {
-        subHoverStartTime = now;
-        subHoverTriggered = false;
+    // initialize timer if no timer was set
+    if (hoverState[level].startTime === null) {
+        hoverState[level].startTime = now;
+        hoverState[level].triggered = false;
     }
 
-    // calculate progress
-    const elapsed = now - subHoverStartTime;
-    subHoverProgress = Math.min(elapsed / SUB_HOVER_DURATION, 1);
+    // update progress
+    const elapsed = now - hoverState[level].startTime;
+    hoverState[level].progress = Math.min(elapsed / HOVER_FILL_DURATION, 1);
 
+    // trigger after dwell threshold
+    if (hoverState[level].progress >= 1 && !hoverState[level].triggered) {
+        hoverState[level].triggered = true;
+        menuState.selectedPath[level] = menuState.hoverPath[level];
 
-    // if progress is finished = dwell complete -> trigger ction
-    if (subHoverProgress >= 1 && !subHoverTriggered) {
-        subHoverTriggered = true;
-        menuState.selectedPath[1] = menuState.hoverPath[1];
-        const item = menu.items[menuState.selectedPath[0]].subItems[menuState.selectedPath[1]];
-        if (item.action) {
-            handleMenuAction(item.action);
+        if (level === 0 && sliderVisible) {
+            hideSlider();
+        } else if (level === 1){
+            const item = menu.items[menuState.selectedPath[0]].subItems[menuState.selectedPath[1]];
+            if (item.action) {
+                handleMenuAction(item.action);
+            }
         }
     }
 }
@@ -380,12 +350,12 @@ function drawSubMenu() {
         // highlight active sub-segment with dwell animation
         if (i === menuState.hoverPath[1]) {
             // dwell fill (radial)
-            if (subHoverProgress > 0) {
+            if (hoverState[1].progress > 0) {
                 ctx.beginPath();
                 ctx.moveTo(menu.x, menu.y);
 
                 const fillEnd =
-                    a0 + (a1 - a0) * subHoverProgress;
+                    a0 + (a1 - a0) * hoverState[1].progress;
 
                 ctx.arc(menu.x, menu.y, outerRadius, a0, fillEnd);
                 ctx.arc(menu.x, menu.y, innerRadius, fillEnd, a0, true);
