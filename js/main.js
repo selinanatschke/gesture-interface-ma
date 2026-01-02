@@ -1,5 +1,12 @@
 import { dwellProgress, resetTimers, updateIdle, updateDwell, drawDwellRing } from "./timings.js";
-import { getActiveMainSegment, drawMarkingMenu, updateSubMenuState, updateHoverFill, updateSubHover } from "./menu.js";
+import {
+    drawMarkingMenu,
+    updateSubMenuState,
+    updateHoverFill,
+    updateSubHover,
+    getActiveMainSegment,
+    menuState
+} from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, updateSlider,} from "./slider.js";
@@ -60,17 +67,17 @@ hands.onResults((results) => {
         if (handDetected) {
             updateCursor(results);
             updateSlider(results);
-            activeMainSegment = getActiveMainSegment();
-            updateHoverFill(now, activeMainSegment);
+            menuState.hoverPath[0] = getActiveMainSegment();
+            updateHoverFill(now);
             updateSubHover(now)
         }
-        drawMarkingMenu(activeMainSegment);
+        drawMarkingMenu();
 
         // if slider data is available, this draws the slider
         drawSliderCanvas();
     }
 
-    updateSubMenuState(handDetected, activeMainSegment)
+    updateSubMenuState(handDetected)
 });
 
 // start camera

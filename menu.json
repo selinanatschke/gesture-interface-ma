@@ -29,17 +29,28 @@
     },
     {
       "label": "B",
-      "subItems": [
-        { "label": "B1" },
-        { "label": "B2" }
-      ]
+      "action": {
+        "name": "print",
+        "type": "text"
+      }
     },
     {
       "label": "C",
       "subItems": [
-        { "label": "C1" },
-        { "label": "C2" },
-        { "label": "C3" }
+        {
+          "label": "C1",
+          "action": {
+            "name": "print",
+            "type": "text"
+          }
+        },
+        {
+          "label": "C2",
+          "action": {
+            "name": "print",
+            "type": "number"
+          }
+        }
       ]
     }
   ]

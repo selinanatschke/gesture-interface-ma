@@ -6,35 +6,33 @@ import { hideSlider, showSlider, sliderFaded, sliderVisible } from "./slider.js"
 const response = await fetch("./menu.json");
 export const menu = await response.json();
 
-let selectedMainIndex = null;   // which main segment is selected (with dwell time finished)
-let selectedSubIndex = null;    // which sub segment is selected (with dwell time finished)
-let activeSubSegment = null;    // which sub segment cursor is in
+export let menuState = {
+    selectedPath: [],         // ([1,0] e.g. menu.items[1].subItems[0]) array of segments whose selection was already confirmed by dwell time (max. number of elements = max. depth of sub-item-depth)
+    hoverPath: [],          // ([1,0] e.g. menu.items[1].subItems[0]) array of segments whose cursor hovers over segment (can be either one if in main menu or 2 for main element + its sub element, ...)
+}
+
+let previousMainSegment = null;  // which sub segment was selected in the last frame
 let previousSubSegment = null;  // which sub segment was selected in the last frame
 
 const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
 const SUB_HOVER_DURATION = 3000;
 
 // for dwell timer of main menu selection
-let hoverStartTimes = new Array(menu.items.length).fill(null);
-let hoverProgress = new Array(menu.items.length).fill(0);
-let hoverTriggered = new Array(menu.items.length).fill(false);
+let hoverStartTime = null;
+let hoverProgress = 0;
+let hoverTriggered = false;
 
 // for dwell timer of sub menu selection
 let subHoverStartTime = null;
 let subHoverProgress = 0;
 let subHoverTriggered = false;
 
-export function drawMarkingMenu(activeIndex = -1) {
+export function drawMarkingMenu() {
     const { x, y, radius, items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
 
-    if (sliderFaded) {
-        ctx.globalAlpha = 1;
-    } else if (sliderVisible) {
-        ctx.globalAlpha = 0.5;                          // if slider is visible, menu should be greyed out
-    } else {
-        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1; // everything drawn after this is drawn with opacity 0.5
-    }
+    setMenuGlobalAlpha();
+
     ctx.strokeStyle = "black";
     ctx.lineWidth = 2;
 
@@ -42,105 +40,146 @@ export function drawMarkingMenu(activeIndex = -1) {
         const startAngle = i * angleStep;
         const endAngle = startAngle + angleStep;
 
-        // highlight active segment by setting the fill color AND highlight main segment if cursor is in submenu
-        const cursorInSubMenu = selectedMainIndex !== null && isCursorInSubMenuRing(menu, cursor); // calculate if cursor is in submenu
-        const isMainHighlighted = (i === activeIndex || (cursorInSubMenu && i === selectedMainIndex)) || sliderVisible && i === selectedMainIndex ;  // highlight if: (normal hover OR cursor is in submenu) OR slider is visible AND it was done by selecting its submenu
-        if (isMainHighlighted) {
-            ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
-            // ctx.strokeStyle = "magenta";
-        } else {
-            ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
-            // ctx.strokeStyle = "black";
-        }
+        const isHighlighted = isMainSegmentHighlighted(i);
 
-        // draw segment
-        ctx.beginPath();
-        ctx.moveTo(x, y);                                   // line starts in the middle
-        ctx.arc(x, y, radius, startAngle, endAngle);        // draw arc from startAngle to endAngle
-        ctx.closePath();                                    // line back to the middle
-        ctx.fill();                                         // fill with background color
-        ctx.stroke();                                       // draw stroke
+        drawSegment(x, y, radius, startAngle, endAngle, isHighlighted);
+        drawMainLabel(i, x, y, radius, startAngle, endAngle);
+        drawHoverFill(i, x, y, radius, startAngle, endAngle);
+    }
 
-        // calculate label position
-        const midAngle = startAngle + angleStep / 2;
-        const labelX = x + Math.cos(midAngle) * radius * 0.6;
-        const labelY = y + Math.sin(midAngle) * radius * 0.6;
-
-        ctx.fillStyle = "black";                        // color of label
-        ctx.font = "24px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(items[i].label, labelX, labelY);
-
-        // hover fill from left to right
-        const progress = hoverProgress[i] || 0;
-        if (progress > 0) {
-            ctx.save();     // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
-
-            // create segment-path new and set as a clip
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.arc(x, y, radius, startAngle, endAngle);
-            ctx.closePath();
-            ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
-
-            // draw dwell fill only for hovered segment (angle based)
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            const fillEndAngle = startAngle + (endAngle - startAngle) * progress;
-            ctx.arc(x, y, radius, startAngle, fillEndAngle);
-            ctx.closePath();
-            ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-            ctx.fill();
-
-            // back to state that we saved to stack
-            ctx.restore();
+    // draw submenu if cursor is inside menu or interacting with a slider
+    const cursorInMenu = checkIfCursorIsInMenu()
+    if(cursorInMenu || sliderVisible || isCursorInSubMenuRing()){
+        // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
+        if (menuStateItemIsSet(menuState.selectedPath[0])) {
+            drawSubMenu();
         }
     }
 
-    // draw submenu if main segment was selected
-    if (selectedMainIndex !== null) {
-        drawSubMenu(selectedMainIndex);
-    }
+    ctx.globalAlpha = 1;
+}
 
-    ctx.globalAlpha = 1;    // make sure dwell timer is drawn with opacity 1 afterwards
+function setMenuGlobalAlpha() {
+    if (sliderFaded) {
+        ctx.globalAlpha = 1;
+    } else if (sliderVisible) {     // if slider is visible, menu should be greyed out
+        ctx.globalAlpha = 0.5;
+    } else {
+        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1;
+    }
+}
+
+function isMainSegmentHighlighted(i) {
+    const activeMainSegment = menuState.hoverPath[0];
+    const selectedMainSegment = menuState.selectedPath[0];
+
+    // if main segment is selected, check if it has subItems
+    const hasSubItems = menuStateItemIsSet(selectedMainSegment) ? Object.hasOwn(menu.items[selectedMainSegment], 'subItems') : false;
+
+    // check if cursor is in submenuRing
+    const cursorInSubMenu =
+        menuStateItemIsSet(menuState.selectedPath[0]) && (hasSubItems && isCursorInSubMenuRing()); // calculate if cursor is in submenu
+
+    return (
+        i === activeMainSegment                                   // normal hover
+        || (cursorInSubMenu && i === menuState.selectedPath[0])   // cursor in submenu (+ submenu exists)
+        || (sliderVisible && i === menuState.selectedPath[0] && !sliderFaded)     // slider keeps highlight
+    );
+}
+
+function drawSegment(x, y, radius, startAngle, endAngle, highlighted) {
+    ctx.fillStyle = highlighted
+        ? "rgba(255, 0, 255, 0.3)"
+        : "rgba(0, 0, 0, 0.05)";
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+}
+
+function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
+    const midAngle = (startAngle + endAngle) / 2;
+    const labelX = x + Math.cos(midAngle) * radius * 0.6;
+    const labelY = y + Math.sin(midAngle) * radius * 0.6;
+
+    ctx.fillStyle = "black";                        // color of label
+    ctx.font = "24px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(menu.items[i].label, labelX, labelY);
+}
+
+function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
+    const activeMainSegment = menuState.hoverPath[0];
+
+    // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
+    if (hoverProgress === 0 || i !== activeMainSegment || i === menuState.selectedPath[0]) return;
+
+    // create segment-path new and set as a clip
+    ctx.save();             // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.closePath();
+    ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
+
+    // draw dwell fill only for hovered segment (angle based)
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    const fillEndAngle = startAngle + (endAngle - startAngle) * hoverProgress;
+    ctx.arc(x, y, radius, startAngle, fillEndAngle);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+    ctx.fill();
+
+    // back to state that we saved to stack
+    ctx.restore();
 }
 
 // close submenus only if cursor is neither in menu nor in submenu (nor slider is opened)
 // active main segment is segment in which cursor is currently (if cursor is in subsegments, activeMainSegment is -1)
-export function updateSubMenuState(handDetected, activeMainSegment){
+export function updateSubMenuState(handDetected){
+    const activeMainSegment = menuState.hoverPath[0];
+
     // determines whether submenu is opened or not
     const inMainMenu = activeMainSegment !== -1;                                        // determines if cursor is in main menu
-    const inSubMenu = selectedMainIndex !== null && isCursorInSubMenuRing(menu, cursor);// main menu item was selected (=submenu is open) && cursor is in submenu ring
-    if (!inMainMenu && !inSubMenu) {                                                    // if cursor is not in menu + not in submenu -> remove selection from both
-        selectedMainIndex = null;
-        activeSubSegment = null;
+    const inSubMenu = menuState.selectedPath[0] !== null && isCursorInSubMenuRing();            // main menu item was selected (=submenu is open) && cursor is in submenu ring
+    if (!inMainMenu && !inSubMenu && sliderFaded) {                                             // if cursor is not in menu + not in submenu -> remove selection from both (only if slider is not open)
+        menuState.selectedPath[0] = null;
+        menuState.hoverPath[1] = null;
     }
 
     // highlight submenu if hand is detected && an element from the main menu was selected
-    if (handDetected && selectedMainIndex !== null) {
-        activeSubSegment = getActiveSubSegment(menu, cursor, selectedMainIndex);          // determines which subsegment cursor is in
+    if (handDetected && ( menuState.selectedPath[0]> -1 || menuState.selectedPath[0] !== null|| menuState.selectedPath[0] !== undefined )) {
+        menuState.hoverPath[1] = getActiveSubSegment(menu, cursor);          // determines which subsegment cursor is in
     } else {
-        activeSubSegment = null;
+        menuState.hoverPath[1] = null;
     }
 
     // if we switch main menus -> also update submenu
-    if (activeMainSegment !== -1 && activeMainSegment !== selectedMainIndex) {            // if cursor is in main menu AND cursor is in segment which was not selected (with dwelltime)
-        selectedMainIndex = null;
-        activeSubSegment = null;
+    if (activeMainSegment !== -1 && activeMainSegment !== menuState.selectedPath[0] && sliderVisible && !sliderFaded) {            // if cursor is in main menu AND cursor is in segment which was not selected (with dwelltime)
+        menuState.selectedPath[0] = null;
+        menuState.hoverPath[1] = null;
     }
 
     // reset submenu timers if subsegment has changed (previous = previous frame)
-    if (activeSubSegment !== previousSubSegment) {
+    if (menuState.hoverPath[1] !== previousSubSegment) {
         subHoverStartTime = null;
         subHoverProgress = 0;
         subHoverTriggered = false;
     }
-    previousSubSegment = activeSubSegment;
+    previousSubSegment = menuState.hoverPath[1];
+    previousMainSegment = menuState.hoverPath[0];
 }
 
 // calculate which segment is hovered on based on the angle
 export function getActiveMainSegment() {
+    // if slider is visible and slider is not faded (in use) the activeMainSegment should be the one that opened the slider
+    if( sliderVisible && !sliderFaded ) return menuState.selectedPath[0];
+
     const distance = getCursorDistance(menu, cursor);
 
     const outerRadius = menu["radius"];
@@ -153,75 +192,83 @@ export function getActiveMainSegment() {
     const angle = getCursorAngle(menu, cursor);
     const angleStep = (Math.PI * 2) / menu.items.length;
 
-    return Math.floor(angle / angleStep);
+    const result = Math.floor(angle / angleStep);
+    if (result > -1){
+        return result;
+    }
 }
 
 // calculates dwell times on hovering a menu item
-export function updateHoverFill(now, activeIndex) {
-    for (let i = 0; i < menu.items.length; i++) {
-        if (i === activeIndex && selectedMainIndex == null) {     // start fill animation if cursor is inside but only if submenu is not already open
-            if (hoverStartTimes[i] === null) {
-                hoverStartTimes[i] = now;
-                hoverTriggered[i] = false;
-            }
+export function updateHoverFill(now) {
+    // prevent dwell interaction while slider is used
+    if (sliderVisible && !sliderFaded) return;
 
-            const elapsed = now - hoverStartTimes[i];
-            hoverProgress[i] = Math.min(elapsed / HOVER_FILL_DURATION, 1);
+    const activeMainSegment = menuState.hoverPath[0];
 
-            if (hoverProgress[i] >= 1 && !hoverTriggered[i]) {
-                hoverTriggered[i] = true;
-                selectedMainIndex = i;
+    // nothing hovered OR selection already made OR switch of hovered segment -> reset
+    if (menuStateItemIsNotSet(activeMainSegment) || activeMainSegment !== previousMainSegment) {
+        hoverStartTime = null;
+        hoverProgress = 0;
+        hoverTriggered = false;
+    }
 
-                // if a new main segment is selected, hide the slider from the old selection
-                if (sliderVisible) {
-                    hideSlider();
-                }
-            }
-        } else {
-            // not in segment anymore -> reset
-            hoverStartTimes[i] = null;
-            hoverProgress[i] = 0;
-            hoverTriggered[i] = false;
+    // initialize timer if no timer was set
+    if (hoverStartTime === null) {
+        hoverStartTime = now;
+        hoverTriggered = false;
+    }
+
+    // update progress
+    const elapsed = now - hoverStartTime;
+    hoverProgress = Math.min(elapsed / HOVER_FILL_DURATION, 1);
+
+    // trigger after dwell threshold
+    if (hoverProgress >= 1 && !hoverTriggered) {
+        hoverTriggered = true;
+        menuState.selectedPath[0] = menuState.hoverPath[0];
+
+        if (sliderVisible) {
+            hideSlider();
         }
     }
 }
 
-
-// calculates dwell times on hovering a submenu item
+/** If submenu item is hovered & slider is not in interactive mode -> start dwell -> if completed -> do action
+ *
+ * @param now
+ */
 export function updateSubHover(now) {
-
-    // TODO correct highlight of subitem when slider is not faded!
-
     // if no main menu item was selected OR no submenu item is hovered, reset all dwell timers and return OR the slider is visible and cursor is in slider -> prevents accidental selection of other item while using the slider
-    if (selectedMainIndex === null || activeSubSegment === null || sliderVisible && !sliderFaded) {
+    if(menuStateItemIsNotSet(menuState.selectedPath[0]) || menuStateItemIsNotSet(menuState.hoverPath[1]) || sliderVisible && !sliderFaded) {
         subHoverStartTime = null;
         subHoverProgress = 0;
         subHoverTriggered = false;
         return;
     }
 
-    // if no start time was set, set one
+    // initialize dwell timer -> if no start time was set, set one
     if (subHoverStartTime === null) {
         subHoverStartTime = now;
         subHoverTriggered = false;
     }
 
-    // calculate progress and if it was already finished
+    // calculate progress
     const elapsed = now - subHoverStartTime;
     subHoverProgress = Math.min(elapsed / SUB_HOVER_DURATION, 1);
 
-    // if progress is finished
+
+    // if progress is finished = dwell complete -> trigger ction
     if (subHoverProgress >= 1 && !subHoverTriggered) {
         subHoverTriggered = true;
-        const item = menu.items[selectedMainIndex].subItems[activeSubSegment];
+        menuState.selectedPath[1] = menuState.hoverPath[1];
+        const item = menu.items[menuState.selectedPath[0]].subItems[menuState.selectedPath[1]];
         if (item.action) {
-            selectedSubIndex = activeSubSegment;
             handleMenuAction(item.action);
         }
     }
 }
 
-function isCursorInSubMenuRing(menu, cursor) {
+function isCursorInSubMenuRing() {
     const distance = getCursorDistance(menu, cursor);
     const inner = menu["radius"];
     const outer = menu["radius"] + 80; // same as submenu
@@ -229,9 +276,33 @@ function isCursorInSubMenuRing(menu, cursor) {
     return distance >= inner && distance <= outer;
 }
 
+/** This method checks if the cursor is still in the submenu and if the selection has to be resetted.
+ * The selection must be resetted, if:
+ * - the cursor is not in the menu, nor in a submenu and it is no slider visible
+ * @returns {boolean}
+ */
+function checkIfCursorIsInMenu() {
+    const distance = getCursorDistance(menu, cursor);
+    const mainMenuCircle = menu["radius"];
+    const cursorInMenu =  distance <= mainMenuCircle;
+
+    if (cursorInMenu) {
+        return true;
+    } else {
+        if(!isCursorInSubMenuRing() && !sliderVisible){
+            menuState.selectedPath[0] = null;
+        }
+        return false;
+    }
+}
+
 // calculates active subsegment by angle and distance of cursor to the center
-function getActiveSubSegment(menu, cursor, mainIndex) {
-    if (mainIndex === null) return -1;
+function getActiveSubSegment(menu, cursor) {
+    // if slider is visible and slider is not faded (in use) the activeSubSegment should be the one that opened the slider
+    if( sliderVisible && !sliderFaded ) return menuState.selectedPath[1];
+
+    const mainIndex = menuState.selectedPath[0];
+    if (menuStateItemIsNotSet(mainIndex)) return -1;
 
     const distance = getCursorDistance(menu, cursor);
     const inner = menu["radius"];
@@ -248,19 +319,25 @@ function getActiveSubSegment(menu, cursor, mainIndex) {
     if (angle < startAngle || angle > endAngle) return -1;
 
     const subItems = menu.items[mainIndex].subItems;
+    if (!subItems) return;      // if element does not have children, return
     const subStep = (endAngle - startAngle) / subItems.length;
 
-    return Math.floor((angle - startAngle) / subStep);
+    const result = Math.floor((angle - startAngle) / subStep)
+    if (result > -1) {
+        return result;
+    }
 }
 
 // calculates angles and radius for submenu + draws them
-function drawSubMenu(selectedMainIndex) {
-    const subItems = menu.items[selectedMainIndex].subItems;
+function drawSubMenu() {
+    const itemIndex = menuState.selectedPath[0];
+
+    const subItems = menu.items[itemIndex].subItems;
     if (!subItems) return;
 
     const angleStep = (Math.PI * 2) / menu.items.length;
 
-    const startAngle = selectedMainIndex * angleStep;
+    const startAngle = itemIndex * angleStep;
     const endAngle = startAngle + angleStep;
 
     const innerRadius = menu["radius"];
@@ -294,11 +371,14 @@ function drawSubMenu(selectedMainIndex) {
             menu.y + Math.sin(mid) * r
         );
 
-        // highlight active sub-segment
-        if (i === activeSubSegment ) {
+        // highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
+        if (i === menuState.hoverPath[1] || i === menuState.selectedPath[1] && sliderVisible && !sliderFaded){
             ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
             ctx.fill();
+        }
 
+        // highlight active sub-segment with dwell animation
+        if (i === menuState.hoverPath[1]) {
             // dwell fill (radial)
             if (subHoverProgress > 0) {
                 ctx.beginPath();
@@ -337,4 +417,11 @@ function handleMenuAction(action) {
         default:
             console.warn("Unknown action type", action);
     }
+}
+
+function menuStateItemIsSet(menuStateItem){
+    return menuStateItem > -1 && menuStateItem !== undefined && menuStateItem !== null
+}
+function menuStateItemIsNotSet(menuStateItem){
+    return menuStateItem === undefined || menuStateItem < 0 || menuStateItem === null
 }
