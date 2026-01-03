@@ -8,11 +8,18 @@ let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
 
 export const sliderState = {
-    faded: false,
     visible: false,
     preview: false,
     previewOwner: null
 };
+
+/** This determines what is visible and interactive
+ *  current can be: menu, slider
+ * @type {{current: string}}
+ */
+export const uiMode = {
+    current: "menu", // || "slider"
+}
 
 // positions for tracking movement while pinched
 let lastHandPositionX = null;
@@ -24,7 +31,7 @@ const handImg = new Image();
 export function drawSliderCanvas() {
     if (!sliderConfig || !sliderState.visible) return;
 
-    if (sliderState.faded) ctx.globalAlpha = 0.5;
+    if (uiMode.current === "menu") ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
@@ -189,24 +196,24 @@ export function updateSliderValueFromHand(results) {
     sliderValue = Math.min(1, Math.max(0, sliderValue));
 }
 
-// updates if curosr is in menu or in slider if slider is opened
-export function updateSliderFaded() {
+// updates if cursor is in menu or in slider if slider is opened
+export function updateUiMode() {
     if (!sliderState.visible) {
-        sliderState.faded = false;
+        uiMode.current = "slider"
         return;
     }
 
     // preview state: do not overwrite faded to false
     if (sliderState.preview) {
-        sliderState.faded = true;
+        uiMode.current = "menu"
         return;
     }
 
     // cursor back in menu?
     if (getCursorDistance() < menu["radius"] + 60 && !isPinched) {
-        sliderState.faded = true;
+        uiMode.current = "menu"
     } else {
-        sliderState.faded = false;
+        uiMode.current = "slider"
     }
 }
 
@@ -216,9 +223,9 @@ export function hideSlider() {
 
 // updates slider faded state, AND if slider is visible: updates pinch state + update slider value
 export function updateSlider(results) {
-    updateSliderFaded();
+    updateUiMode();
 
-    if (sliderState.visible && !sliderState.faded) {
+    if (sliderState.visible && uiMode.current === "slider") {
         updateIsPinched(results);
         updateSliderValueFromHand(results);
     }
@@ -230,6 +237,6 @@ export function showSliderPreview(type, owner) {
     showSlider(type);
     sliderState.visible = true;
     sliderState.preview = true;
-    sliderState.faded = true;
+    uiMode.current = "menu"
     sliderState.previewOwner = owner
 }

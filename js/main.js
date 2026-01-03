@@ -4,7 +4,7 @@ import {
     updateSubMenuState,
     updateHoverFill,
     getActiveMainSegment,
-    menuState
+    interactionState
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
@@ -66,7 +66,7 @@ hands.onResults((results) => {
         if (handDetected) {
             updateCursor(results);
             updateSlider(results);
-            menuState.hoverPath[0] = getActiveMainSegment();
+            interactionState.main.hover = getActiveMainSegment();
             updateHoverFill(now, 0);    // main manu
             updateHoverFill(now, 1);    // sub menu
         }
