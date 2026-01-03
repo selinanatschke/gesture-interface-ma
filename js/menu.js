@@ -47,9 +47,9 @@ export function drawMarkingMenu() {
         drawHoverFill(i, x, y, radius, startAngle, endAngle);
     }
 
-    // draw submenu if cursor is inside menu or interacting with a slider
+    // draw submenu if cursor is hovering over selected main segment or interacting with a slider
     const cursorInMenu = checkIfCursorIsInMenu()
-    if(cursorInMenu || sliderState.visible || isCursorInSubMenuRing()){
+    if(interactionState.main.selected === interactionState.main.hover || sliderState.visible || isCursorInSubMenuRing()){
         // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
         if (stateItemIsSet(interactionState.main.selected)) {
             drawSubMenu();
