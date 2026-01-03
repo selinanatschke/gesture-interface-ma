@@ -1,5 +1,5 @@
 import { ctx } from "./main.js";
-import { menu } from "./menu.js";
+import { getHoveredItem, interactionState, itemHasSlider, menu } from "./menu.js";
 import { isPinched, updateIsPinched } from "./gestures.js";
 import { getCursorDistance } from "./cursor.js";
 
@@ -69,6 +69,59 @@ function drawVerticalSlider() {
     // hand-symbol
     if (handImg.complete) {
         ctx.drawImage(handImg, sliderX + 70, sliderY + sliderHeight/2 - 120/2, 80, 120);
+    }
+}
+
+// close preview if hover does not match owner
+export function handlePreview(level){
+    // TODO if slider is active (selected) and user hovers over another item with a preview, the active slider disappears completely if user wants to interact
+
+    if (sliderState.preview) {
+        const owner = sliderState.previewOwner;
+
+        const stillHovered =
+            owner?.level === 0
+                ? interactionState.main.hover === owner.index
+                : (
+                    interactionState.sub.hover === owner.sub &&
+                    interactionState.main.selected === owner.main
+                );
+
+        if (!stillHovered) {
+            hideSlider();
+            sliderState.preview = false;
+            sliderState.previewOwner = null;
+        }
+    }
+
+    // preview
+    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1){
+        const hoveredItem =
+            level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
+        if (!itemHasSlider(hoveredItem)) return;
+        const owner =
+            level === 0
+                ? { level: 0, index: interactionState.main.hover }
+                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
+
+        if (!sliderState.preview) {
+            showSliderPreview(hoveredItem.action.type, owner);
+        }
+    }
+
+    // slider preview if hover but not confirmed yet
+    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1) {
+        const hoveredItem = level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
+
+        const owner =
+            level === 0
+                ? { level: 0, index: interactionState.main.hover }
+                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
+
+        if (itemHasSlider(hoveredItem) && !sliderState.preview) {
+            showSliderPreview(hoveredItem.action.type, owner);
+
+        }
     }
 }
 

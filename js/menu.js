@@ -1,7 +1,7 @@
 import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
 import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
-import { hideSlider, showSlider, showSliderPreview, sliderState, uiMode } from "./slider.js";
+import {handlePreview, hideSlider, showSlider, showSliderPreview, sliderState, uiMode} from "./slider.js";
 
 const response = await fetch("./menu.json");
 export const menu = await response.json();
@@ -263,59 +263,6 @@ function isCursorInSubMenuRing() {
     return distance >= inner && distance <= outer;
 }
 
-// close preview if hover does not match owner
-function handlePreview(level){
-    // TODO if slider is active (selected) and user hovers over another item with a preview, the active slider disappears completely if user wants to interact
-
-    if (sliderState.preview) {
-        const owner = sliderState.previewOwner;
-
-        const stillHovered =
-            owner?.level === 0
-                ? interactionState.main.hover === owner.index
-                : (
-                    interactionState.sub.hover === owner.sub &&
-                    interactionState.main.selected === owner.main
-                );
-
-        if (!stillHovered) {
-            hideSlider();
-            sliderState.preview = false;
-            sliderState.previewOwner = null;
-        }
-    }
-
-    // preview
-    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1){
-        const hoveredItem =
-            level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
-        if (!itemHasSlider(hoveredItem)) return;
-        const owner =
-            level === 0
-                ? { level: 0, index: interactionState.main.hover }
-                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
-
-        if (!sliderState.preview) {
-            showSliderPreview(hoveredItem.action.type, owner);
-        }
-    }
-
-    // slider preview if hover but not confirmed yet
-    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1) {
-        const hoveredItem = level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
-
-        const owner =
-            level === 0
-                ? { level: 0, index: interactionState.main.hover }
-                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
-
-        if (itemHasSlider(hoveredItem) && !sliderState.preview) {
-            showSliderPreview(hoveredItem.action.type, owner);
-
-        }
-    }
-}
-
 /** This method checks if the cursor is still in the submenu and if the selection has to be resetted.
  * The selection must be resetted, if:
  * - the cursor is not in the menu, nor in a submenu and it is no slider visible
@@ -368,7 +315,7 @@ function getActiveSubSegment() {
     }
 }
 
-function getHoveredItem(level){
+export function getHoveredItem(level){
     // main item
     if(level === "main" || level === 0){
         return menu.items[interactionState.main.hover]
@@ -485,7 +432,7 @@ function stateItemIsNotSet(stateItem){
     return stateItem === undefined || stateItem < 0 || stateItem === null
 }
 
-function itemHasSlider(item) {
+export function itemHasSlider(item) {
     return item?.action?.name === "open_slider";
 }
 
