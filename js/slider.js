@@ -2,6 +2,7 @@ import { ctx } from "./main.js";
 import { getHoveredItem, interactionState, itemHasSlider, menu } from "./menu.js";
 import { isPinched, updateIsPinched } from "./gestures.js";
 import { getCursorDistance } from "./cursor.js";
+import { dwellProgress } from "./timings.js";
 
 let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
@@ -45,7 +46,7 @@ export function openSelectedSlider(selectedSliderType){
 export function drawSliderCanvas() {
     if (!sliderConfig || !sliderState.visible) return;
 
-    if (uiMode.current === "menu") ctx.globalAlpha = 0.5;
+    if (sliderState.preview || dwellProgress > 0) ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
