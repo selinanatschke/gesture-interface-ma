@@ -6,8 +6,13 @@ import { getCursorDistance } from "./cursor.js";
 let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
-export let sliderVisible = false;
-export let sliderFaded = false;
+
+export const sliderState = {
+    faded: false,
+    visible: false,
+    preview: false,
+    previewOwner: null
+};
 
 // positions for tracking movement while pinched
 let lastHandPositionX = null;
@@ -17,9 +22,9 @@ let lastHandPositionY = null;
 const handImg = new Image();
 
 export function drawSliderCanvas() {
-    if (!sliderConfig || !sliderVisible) return;
+    if (!sliderConfig || !sliderState.visible) return;
 
-    if (sliderFaded) ctx.globalAlpha = 0.5;
+    if (sliderState.faded) ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
@@ -92,7 +97,8 @@ function drawHorizontalSlider() {
 }
 
 export function showSlider(type) {
-    sliderVisible = true;
+    sliderState.visible = true;
+    sliderState.preview = false;
 
     // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
@@ -185,30 +191,45 @@ export function updateSliderValueFromHand(results) {
 
 // updates if curosr is in menu or in slider if slider is opened
 export function updateSliderFaded() {
-    if (!sliderVisible) {
-        sliderFaded = false;
+    if (!sliderState.visible) {
+        sliderState.faded = false;
+        return;
+    }
+
+    // preview state: do not overwrite faded to false
+    if (sliderState.preview) {
+        sliderState.faded = true;
         return;
     }
 
     // cursor back in menu?
     if (getCursorDistance() < menu["radius"] + 60 && !isPinched) {
-        sliderFaded = true;
+        sliderState.faded = true;
     } else {
-        sliderFaded = false;
+        sliderState.faded = false;
     }
 }
 
 export function hideSlider() {
-    sliderVisible = false;
+    sliderState.visible = false;
 }
 
 // updates slider faded state, AND if slider is visible: updates pinch state + update slider value
-export function updateSlider(results){
+export function updateSlider(results) {
     updateSliderFaded();
 
-    if (sliderVisible && !sliderFaded) {
+    if (sliderState.visible && !sliderState.faded) {
         updateIsPinched(results);
         updateSliderValueFromHand(results);
     }
+}
 
+export function showSliderPreview(type, owner) {
+    if (!type) return;
+
+    showSlider(type);
+    sliderState.visible = true;
+    sliderState.preview = true;
+    sliderState.faded = true;
+    sliderState.previewOwner = owner
 }

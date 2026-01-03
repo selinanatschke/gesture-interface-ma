@@ -1,5 +1,5 @@
 import { ctx } from "./main.js";
-import {sliderVisible} from "./slider.js";
+import { sliderState } from "./slider.js";
 import { menu } from "./menu.js"
 
 export let cursor = {
@@ -21,7 +21,7 @@ export function updateCursor(results){
 }
 
 function drawCursor(x, y) {
-    if (sliderVisible) ctx.globalAlpha = 0.5;
+    if (sliderState.visible) ctx.globalAlpha = 0.5;
 
     ctx.fillStyle = "purple";
     ctx.beginPath();
