@@ -1,7 +1,7 @@
 import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
 import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
-import { handlePreview, hideSlider, showSlider, sliderState, uiMode } from "./slider.js";
+import { handlePreview, hideSlider, openSelectedSlider, sliderState, uiMode } from "./slider.js";
 
 const response = await fetch("./menu.json");
 export const menu = await response.json();
@@ -76,10 +76,11 @@ export function updateHoverFill(now, level) {
 
     const progressFinished = updateDwell(needsReset, level, now);
 
-    // if progress is finished and the action was not already triggered -> save new selected item + do action/navigate
+    // if progress is finished and the action was not already triggered -> save new selected item + do action/navigate + reset previously selected slider
     if (progressFinished && !interactionState[level].dwellTriggered) {
         interactionState[level].dwellTriggered = true;
         interactionState[level].selected = interactionState[level].hover
+        sliderState.selectedSliderType = null;
 
         const item = level === "main" ? getHoveredItem("main") : getHoveredItem("sub");
         doActionOrHandleNavigation(item);
@@ -132,9 +133,8 @@ export function drawMarkingMenu() {
         drawHoverFill(i, x, y, radius, startAngle, endAngle);
     }
 
-    // draw submenu if cursor is hovering over selected main segment or interacting with a slider
-    const cursorInMenu = checkIfCursorIsInMenu()
-    if(interactionState.main.selected === interactionState.main.hover || sliderState.visible || isCursorInSubMenuRing()){
+    // draw submenu if cursor is hovering over selected main segment OR slider is visible OR cursor is in submenu ring
+    if(interactionState.main.selected === interactionState.main.hover || sliderState.selectedSliderType !== null || isCursorInSubMenuRing()){
         // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
         if (stateItemIsSet(interactionState.main.selected)) {
             drawSubMenu();
@@ -526,7 +526,7 @@ function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
 function handleMenuAction(action) {
     switch (action.name) {
         case "open_slider":
-            showSlider(action.type);    // enables slider
+            openSelectedSlider(action.type);
             break;
 
         default:

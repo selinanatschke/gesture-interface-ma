@@ -12,12 +12,13 @@ let sliderX, sliderY, sliderWidth, sliderHeight;
  * - pewview: is preview active?
  * - previewOwner: item that opened the preview
  *
- * @type {{visible: boolean, preview: boolean, previewOwner: null}}
+ * @type {{visible: boolean, preview: boolean, previewOwner: null, selectedSliderType: null}}
  */
 export const sliderState = {
     visible: false,
     preview: false,
-    previewOwner: null
+    previewOwner: null,
+    selectedSliderType: null
 };
 
 /** This determines what is visible and interactive
@@ -35,6 +36,9 @@ let lastHandPositionY = null;
 // load image
 const handImg = new Image();
 
+export function openSelectedSlider(selectedSliderType){
+    sliderState.selectedSliderType = selectedSliderType;
+}
 /**
  * Determines whether the slider has to be drawn horizontally or vertically depending on its type
  */
@@ -90,8 +94,6 @@ function drawVerticalSlider() {
  * @param level
  */
 export function handlePreview(level){
-    // TODO if slider is active (selected) and user hovers over another item with a preview, the active slider disappears completely if user wants to interact
-
     if (sliderState.preview) {
         const owner = sliderState.previewOwner;
 
@@ -317,6 +319,11 @@ export function updateSlider(results) {
     if (sliderState.visible && uiMode.current === "slider") {
         updateIsPinched(results);
         updateSliderValueFromHand(results);
+    }
+
+    // if an item with a slider action was already opened and no other slider preview is shown currently, draw slider
+    if(sliderState.selectedSliderType && !sliderState.preview){
+        showSlider(sliderState.selectedSliderType);    // enables slider
     }
 }
 

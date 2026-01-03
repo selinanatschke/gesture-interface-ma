@@ -8,7 +8,7 @@ import {
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
-import { drawSliderCanvas, updateSlider,} from "./slider.js";
+import { drawSliderCanvas, sliderState, updateSlider } from "./slider.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -49,6 +49,15 @@ hands.onResults((results) => {
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     handleDwellAndIdle(handDetected, now);
+
+    // if no hand is detected, all selection/hovers are reset + reset previously selected slider
+    if (!handDetected) {
+        interactionState.main.selected = null;
+        interactionState.main.hover = null;
+        interactionState.sub.hover = null;
+        interactionState.sub.selected = null;
+        sliderState.selectedSliderType = null;
+    }
 
     // if dwell timer is not active or <1, paint menu
     if (dwellProgress < 1) {
