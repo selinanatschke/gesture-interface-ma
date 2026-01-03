@@ -1,4 +1,4 @@
-import { dwellProgress, resetTimers, updateIdle, updateDwell, drawDwellRing } from "./timings.js";
+import { dwellProgress, handleDwellAndIdle } from "./timings.js";
 import {
     drawMarkingMenu,
     updateSubMenuState,
@@ -14,7 +14,9 @@ const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 export const ctx = canvas.getContext("2d");
 
-// adapt canvas to window size
+/**
+ * Function that adapts canvas to window size
+ */
 function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -46,20 +48,7 @@ hands.onResults((results) => {
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
-    if(handDetected && dwellProgress > 0){
-        resetTimers()
-    }
-    const dwellShouldRun = updateIdle(handDetected, now);
-
-    // if dwell timer should run, update values and draw it
-    if (dwellShouldRun) {
-        updateDwell(now);
-    }
-
-    // if dwell timer is running, draw dwell ring
-    if (dwellProgress > 0 && dwellProgress < 1) {
-        drawDwellRing(dwellProgress);
-    }
+    handleDwellAndIdle(handDetected, now);
 
     // if dwell timer is not active or <1, paint menu
     if (dwellProgress < 1) {

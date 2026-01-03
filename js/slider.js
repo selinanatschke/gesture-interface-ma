@@ -7,6 +7,13 @@ let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
 
+/** State that keeps track of slider visibility
+ * - visible: is slider visible?
+ * - pewview: is preview active?
+ * - previewOwner: item that opened the preview
+ *
+ * @type {{visible: boolean, preview: boolean, previewOwner: null}}
+ */
 export const sliderState = {
     visible: false,
     preview: false,
@@ -28,6 +35,9 @@ let lastHandPositionY = null;
 // load image
 const handImg = new Image();
 
+/**
+ * Determines whether the slider has to be drawn horizontally or vertically depending on its type
+ */
 export function drawSliderCanvas() {
     if (!sliderConfig || !sliderState.visible) return;
 
@@ -42,6 +52,9 @@ export function drawSliderCanvas() {
     ctx.globalAlpha = 1;
 }
 
+/**
+ * Draws slider vertically
+ */
 function drawVerticalSlider() {
     // background
     ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
@@ -72,7 +85,10 @@ function drawVerticalSlider() {
     }
 }
 
-// close preview if hover does not match owner
+/**
+ * Closes the preview if hover does not match owner
+ * @param level
+ */
 export function handlePreview(level){
     // TODO if slider is active (selected) and user hovers over another item with a preview, the active slider disappears completely if user wants to interact
 
@@ -125,6 +141,9 @@ export function handlePreview(level){
     }
 }
 
+/**
+ * Draws slider vertically
+ */
 function drawHorizontalSlider() {
     // background
     ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
@@ -156,6 +175,10 @@ function drawHorizontalSlider() {
     }
 }
 
+/** Creates a sliderconfig that is used to determine which orientation the slider needs to have, which images are loaded and where to position it
+ *
+ * @param type
+ */
 export function showSlider(type) {
     sliderState.visible = true;
     sliderState.preview = false;
@@ -211,7 +234,10 @@ export function showSlider(type) {
     }
 }
 
-// modify slider by pinching and dragging in a certain direction
+/**
+ * modifies slider values by pinching and dragging in a certain direction
+ * @param results
+ */
 export function updateSliderValueFromHand(results) {
     // only accept modification if slider is visible and hand is pinched
     if (!isPinched) {
@@ -249,14 +275,17 @@ export function updateSliderValueFromHand(results) {
     sliderValue = Math.min(1, Math.max(0, sliderValue));
 }
 
-// updates if cursor is in menu or in slider if slider is opened
+/**
+ * updates UI Mode if cursor is in menu or in slider if slider is opened
+ */
 export function updateUiMode() {
+    // if slider is not visible, menu is focused
     if (!sliderState.visible) {
-        uiMode.current = "slider"
+        uiMode.current = "menu"
         return;
     }
 
-    // preview state: do not overwrite faded to false
+    // preview state: slider is always faded (not interactive yet)
     if (sliderState.preview) {
         uiMode.current = "menu"
         return;
@@ -270,20 +299,32 @@ export function updateUiMode() {
     }
 }
 
+/**
+ * hides the slider
+ */
 export function hideSlider() {
     sliderState.visible = false;
 }
 
-// updates slider faded state, AND if slider is visible: updates pinch state + update slider value
+/**
+ * activates slider manipulation is slider ui mode is active
+ * @param results
+ */
 export function updateSlider(results) {
     updateUiMode();
 
+    // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values
     if (sliderState.visible && uiMode.current === "slider") {
         updateIsPinched(results);
         updateSliderValueFromHand(results);
     }
 }
 
+/**
+ * Enables slider preview
+ * @param type
+ * @param owner
+ */
 export function showSliderPreview(type, owner) {
     if (!type) return;
 
