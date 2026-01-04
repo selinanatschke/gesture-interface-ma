@@ -8,7 +8,7 @@ import {
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
-import { drawSliderCanvas, sliderState, updateSlider } from "./slider.js";
+import { drawSliderCanvas, hideSlider, sliderState, updateSlider } from "./slider.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -57,6 +57,7 @@ hands.onResults((results) => {
         interactionState.sub.hover = null;
         interactionState.sub.selected = null;
         sliderState.selectedSliderType = null;
+        hideSlider();
     }
 
     // if dwell timer is not active or <1, paint menu

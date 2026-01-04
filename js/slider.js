@@ -96,14 +96,13 @@ function drawVerticalSlider() {
  */
 export function handlePreview(level){
     if (sliderState.preview) {
-        const owner = sliderState.previewOwner;
 
         const stillHovered =
-            owner?.level === 0
-                ? interactionState.main.hover === owner.index
+            (sliderState.previewOwner?.level === 0 || sliderState.previewOwner.level === "main")
+                ? interactionState.main.hover === sliderState.previewOwner?.index
                 : (
-                    interactionState.sub.hover === owner.sub &&
-                    interactionState.main.selected === owner.main
+                    interactionState.sub.hover === sliderState.previewOwner?.sub &&
+                    interactionState.main.selected === sliderState.previewOwner?.main
                 );
 
         if (!stillHovered) {
@@ -116,10 +115,10 @@ export function handlePreview(level){
     // preview
     if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1){
         const hoveredItem =
-            level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
+            (level === 0 || level === "main") ? getHoveredItem("main") : getHoveredItem("sub");
         if (!itemHasSlider(hoveredItem)) return;
         const owner =
-            level === 0
+            (level === 0 || level === "main")
                 ? { level: 0, index: interactionState.main.hover }
                 : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
 
@@ -130,10 +129,10 @@ export function handlePreview(level){
 
     // slider preview if hover but not confirmed yet
     if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1) {
-        const hoveredItem = level === 0 ? getHoveredItem("main") : getHoveredItem("sub");
+        const hoveredItem = (level === 0 || level === "main") ? getHoveredItem("main") : getHoveredItem("sub");
 
         const owner =
-            level === 0
+            (level === 0 || level === "main")
                 ? { level: 0, index: interactionState.main.hover }
                 : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
 
@@ -306,6 +305,7 @@ export function updateUiMode() {
  * hides the slider
  */
 export function hideSlider() {
+    sliderState.preview = false;
     sliderState.visible = false;
 }
 
@@ -314,6 +314,8 @@ export function hideSlider() {
  * @param results
  */
 export function updateSlider(results) {
+    if(!sliderState.selectedSliderType && !sliderState.preview) return;
+
     updateUiMode();
 
     // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values

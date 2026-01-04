@@ -331,8 +331,8 @@ function updateDwell(needsReset, level, now){
 function doActionOrHandleNavigation(selectedItem){
     if (!itemHasSubItems(selectedItem) && selectedItem.action) {
         handleMenuAction(selectedItem.action);
-        sliderState.preview = false;
     } else{
+        // items that open different sub menu
         hideSlider();
     }
 }
@@ -526,10 +526,13 @@ function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
 function handleMenuAction(action) {
     switch (action.name) {
         case "open_slider":
+            sliderState.preview = false;
             openSelectedSlider(action.type);
             break;
 
         default:
+            // hide slider for all actions except open_slider
+            hideSlider()
             console.warn("Unknown action type", action);
     }
 }
