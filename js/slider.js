@@ -37,6 +37,10 @@ let lastHandPositionY = null;
 // load image
 const handImg = new Image();
 
+// play button image
+const playIcon = new Image();
+playIcon.src = "./images/play_icon.png";
+
 export function openSelectedSlider(selectedSliderType){
     sliderState.selectedSliderType = selectedSliderType;
 }
@@ -52,7 +56,7 @@ export function drawSliderCanvas() {
     if (sliderConfig.orientation === "vertical") {
         drawVerticalSlider();
     } else {
-        drawHorizontalSlider();
+        drawHorizontalSlider(sliderConfig.type);
     }
     ctx.globalAlpha = 1;
 }
@@ -146,18 +150,18 @@ export function handlePreview(level){
 /**
  * Draws slider vertically
  */
-function drawHorizontalSlider() {
+function drawHorizontalSlider(type) {
     // background
     ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
     ctx.fillRect(sliderX, sliderY, sliderWidth, sliderHeight);
 
     // bar chart for slider
-    const filledHeight = sliderWidth * sliderValue;
+    const filledWidth = sliderWidth * sliderValue;
     ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
     ctx.fillRect(
         sliderX,
         sliderY,
-        filledHeight,
+        filledWidth,
         sliderHeight
     );
 
@@ -167,14 +171,47 @@ function drawHorizontalSlider() {
     ctx.textAlign = "center";
     ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 20);
 
-    // value
-    ctx.fillText(Math.round(sliderValue * 100) + "%", sliderX + sliderWidth/2, sliderY + sliderHeight + 40);
+    // if type is not presentation, use normal layout
+    if (type !== "presentation") {
+        ctx.fillText(Math.round(sliderValue * 100) + "%", sliderX + sliderWidth / 2, sliderY + sliderHeight + 20
+        );
+    } else {
+        renderPresentationSliderExtras(filledWidth)
+    }
 
-    // hand-symbol
+    // hand-symbol with adaptive spacing
     if (handImg.complete) {
         // ...(handImg, space left to image, space above image, width, height);
-        ctx.drawImage(handImg, sliderX + sliderWidth/2 - 60, sliderY + sliderHeight + 10, 120, 120);
+        ctx.drawImage(handImg, sliderX + sliderWidth/2 - 60, sliderY + sliderHeight + 40, 120, 120);
     }
+}
+
+function renderPresentationSliderExtras(filledWidth){
+    // if type is presentation, add video play button an minute counter
+    const videoLength = 12.5; // min TODO get real value (?)
+    const currentLength = sliderValue * videoLength;
+
+    ctx.font = "20px sans-serif";
+
+    // current time (on the left, moves with slider progress)
+    ctx.textAlign = "left";
+    ctx.fillText(formatMinutes(currentLength), sliderX + filledWidth, sliderY + sliderHeight + 20
+    );
+
+    // total video length (on the right, static)
+    ctx.textAlign = "right";
+    ctx.fillText(formatMinutes(videoLength), sliderX + sliderWidth, sliderY + sliderHeight + 20);
+
+    // play icon (links vom Slider)
+    if (playIcon.complete) {
+        ctx.drawImage(playIcon, sliderX - 40, sliderY + sliderHeight / 2 - 16, 32, 32);
+    }
+}
+
+function formatMinutes(value) {
+    const minutes = Math.floor(value);
+    const seconds = Math.round((value - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
 /** Creates a sliderconfig that is used to determine which orientation the slider needs to have, which images are loaded and where to position it
@@ -187,22 +224,26 @@ export function showSlider(type) {
 
     // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
+        type: type,
         title: {
             volume: "Lautstärke",
             brightness: "Helligkeit",
-            vibration: "Vibration"
+            vibration: "Vibration",
+            presentation: "Wiedergabe vor-/zurückspulen"
         }[type],
 
         orientation: {
             volume: "vertical",
             brightness: "vertical",
-            vibration: "horizontal"
+            vibration: "horizontal",
+            presentation: "horizontal"
         }[type],
 
         position: {
             volume: "right",
             brightness: "left",
-            vibration: "bottom"
+            vibration: "bottom",
+            presentation: "bottom"
         }[type]
     };
 

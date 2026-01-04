@@ -28,10 +28,10 @@
       ]
     },
     {
-      "label": "B",
+      "label": "Präsentationssteuerung",
       "action": {
-        "name": "print",
-        "type": "text"
+        "name": "open_slider",
+        "type": "presentation"
       }
     },
     {
