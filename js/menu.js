@@ -146,15 +146,15 @@ export function drawMarkingMenu() {
 }
 
 /** helper function that makes menu faded if cursor is in slider area (user interacts)
- *
+ * - makes sure if dwell timer for no hands recognized is also fading the menus opacity
  */
 function setMenuGlobalAlpha() {
     if (uiMode.current === "menu") {
-        ctx.globalAlpha = 1;
-    } else if (sliderState.visible) {     // if slider is visible, menu should be greyed out
-        ctx.globalAlpha = 0.5;
-    } else {
         ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1;
+    } else if (sliderState.visible) {     // if slider is visible, menu should be greyed out
+        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 0.5;
+    } else {
+        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1 ;
     }
 }
 
