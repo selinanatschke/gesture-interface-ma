@@ -3,7 +3,7 @@ import {ctx} from "./main.js";
 let idleStartTime = null;       // saves start time of idle timer
 let dwellStartTime = null;      // saves start time of dwell timer
 export let dwellProgress = 0;          // 0..1
-const IDLE_BEFORE_DWELL = 5000; // systems waits this time if no hand was recognized -> after this time dwell timer is started
+const IDLE_BEFORE_DWELL = 10000; // systems waits this time if no hand was recognized -> after this time dwell timer is started
 const DWELL_DURATION = 3000;    // time for the dwell timer
 
 /**
