@@ -9,6 +9,7 @@ import {
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, updateSlider } from "./slider.js";
+import { updateIsGrabbing } from "./gestures.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -63,6 +64,7 @@ hands.onResults((results) => {
     // if dwell timer is not active or <1, paint menu
     if (dwellProgress < 1) {
         if (handDetected) {
+            updateIsGrabbing(results, handDetected);
             updateCursor(results);
             updateSlider(results);
             interactionState.main.hover = getActiveMainSegment();

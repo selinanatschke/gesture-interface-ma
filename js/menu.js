@@ -2,6 +2,7 @@ import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
 import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
 import { handlePreview, hideSlider, openSelectedSlider, sliderState, uiMode } from "./slider.js";
+import { isGrabbing } from "./gestures.js";
 
 const response = await fetch("./menu.json");
 export const menu = await response.json();
@@ -318,6 +319,12 @@ function updateDwell(needsReset, level, now){
         return false
     }
 
+    // if grab gesture is done => skip dwell time OR if selection was already done, also skip dwell time
+    if(isGrabbing || interactionState[level].dwellTriggered){
+        interactionState[level].dwellProgress = 1;
+        return true;
+    }
+
     // update progress
     const elapsed = now - interactionState[level].dwellStart;
     interactionState[level].dwellProgress = Math.min(elapsed / HOVER_FILL_DURATION, 1);
@@ -482,8 +489,8 @@ function drawSubMenu() {
             ctx.fill();
         }
 
-        // highlight active sub-segment with dwell animation
-        if (i === interactionState.sub.hover) {
+        // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
+        if (i === interactionState.sub.hover  && !interactionState.sub.dwellTriggered) {
             // dwell fill (radial)
             if (interactionState.sub.dwellProgress > 0) {
                 ctx.beginPath();

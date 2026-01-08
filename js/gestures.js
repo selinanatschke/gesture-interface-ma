@@ -1,4 +1,5 @@
 export let isPinched;
+export let isGrabbing = false;
 
 /** Detects if pinch gesture is used
  * - since pinch is not a gesture that mediapipe detects by itself, this was used to detect a pinch gesture:
@@ -12,4 +13,45 @@ export function updateIsPinched (results) {
     const distance = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2) + Math.pow(thumbTip.z - indexTip.z, 2));
 
     isPinched = distance < 0.05;
+}
+
+/** Detects if grab gesture is used
+ * - calculates grab using distance from fingertips to palm
+ * @param results
+ * @param handDetected
+ */
+export function updateIsGrabbing(results, handDetected) {
+
+    if(!handDetected){
+        isGrabbing = false;
+        return;
+    }
+
+    const hand = results.multiHandLandmarks[0];
+    const wrist = hand[0];
+
+    // Finger tips
+    const fingerTips = [
+        hand[8],   // index
+        hand[12],  // middle
+        hand[16],  // ring
+        hand[20]   // pinky
+    ];
+
+    // average distance of finger tips to palm
+    let sumDistance = 0;
+
+    for (const tip of fingerTips) {
+        const d = Math.sqrt(
+            Math.pow(tip.x - wrist.x, 2) +
+            Math.pow(tip.y - wrist.y, 2) +
+            Math.pow(tip.z - wrist.z, 2)
+        );
+        sumDistance += d;
+    }
+
+    const avgDistance = sumDistance / fingerTips.length;
+
+    // grab = all fingers near palm
+    isGrabbing = avgDistance < 0.10;
 }
