@@ -1,4 +1,4 @@
-import { dwellProgress, handleDwellAndIdle } from "./timings.js";
+import { dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked } from "./timings.js";
 import {
     drawMarkingMenu,
     updateSubMenuState,
@@ -45,11 +45,11 @@ hands.setOptions({
 hands.onResults((results) => {
     const now = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    let activeMainSegment = -1;
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     handleDwellAndIdle(handDetected, now);
+    if(!menuUnlocked) return;
 
     // if no hand is detected, all selection/hovers are reset + reset previously selected slider
     if (!handDetected) {
@@ -75,6 +75,8 @@ hands.onResults((results) => {
 
         // if slider data is available, this draws the slider
         drawSliderCanvas();
+    } else {
+        setMenuUnlocked(false);
     }
 
     updateSubMenuState(handDetected)

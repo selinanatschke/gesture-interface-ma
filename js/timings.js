@@ -1,10 +1,16 @@
 import {ctx} from "./main.js";
 
+// idle dwell for no interaction
 let idleStartTime = null;       // saves start time of idle timer
 let dwellStartTime = null;      // saves start time of dwell timer
 export let dwellProgress = 0;          // 0..1
 const IDLE_BEFORE_DWELL = 10000; // systems waits this time if no hand was recognized -> after this time dwell timer is started
 const DWELL_DURATION = 3000;    // time for the dwell timer
+
+// activation dwell
+export let menuUnlocked = false;
+let activationStartTime = null;
+const ACTIVATION_DURATION = 3000; // 3s Freischalt-Dwell
 
 /**
  * Methods that handles dwell and idle state actions
@@ -15,6 +21,13 @@ const DWELL_DURATION = 3000;    // time for the dwell timer
  * @param now
  */
 export function handleDwellAndIdle(handDetected, now){
+
+    // activation dwell
+    if (!menuUnlocked) {
+        handleActivationDwell(handDetected, now);
+        return;
+    }
+
     if(handDetected && dwellProgress > 0){
         resetTimers()
     }
@@ -28,6 +41,36 @@ export function handleDwellAndIdle(handDetected, now){
     // if dwell timer is running, draw dwell ring
     if (dwellProgress > 0 && dwellProgress < 1) {
         drawDwellRing(dwellProgress);
+    }
+}
+
+/**
+ * method that handles activation time to open menu
+ * @param handDetected
+ * @param now
+ */
+function handleActivationDwell(handDetected, now) {
+
+    if (!handDetected) {
+        activationStartTime = null;
+        dwellProgress = 0;
+        return;
+    }
+
+    if (activationStartTime === null) {
+        activationStartTime = now;
+    }
+
+    const elapsed = now - activationStartTime;
+    dwellProgress = Math.min(elapsed / ACTIVATION_DURATION, 1);
+
+    drawDwellRing();
+
+    if (dwellProgress >= 1) {
+        menuUnlocked = true;
+        activationStartTime = null;
+        dwellProgress = 0;
+        resetTimers();
     }
 }
 
@@ -70,7 +113,6 @@ export function updateDwell(now) {
 
 /**
  * draws dwell ring that appears if user is not interacting with the menu
- * @param progress
  */
 export function drawDwellRing() {
     if (dwellProgress <= 0) return;
@@ -92,4 +134,8 @@ export function drawDwellRing() {
     ctx.beginPath();
     ctx.arc(x, y, radius, startAngle, endAngle);
     ctx.stroke();
+}
+
+export function setMenuUnlocked(value){
+    menuUnlocked = value;
 }
