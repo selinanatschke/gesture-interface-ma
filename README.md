@@ -5,6 +5,7 @@ This project is a static web application and can be run locally using any simple
 
 ## Features
 ### 1. HandDetection:
+- Activation: If a hand was detected, a small dwell circle appears in the top right corner for 3s. If the user holds the hand, after this activation time, the menu + cursor appears.
 - Cursor: If a hand was detected, a purple circle appears which is mapping the hands position to a cursor in the web frontend
 - Menu: If a hand was detected, a circle menu structure appears with different segments that can be selected
 - No hands detected: After 10 seconds of no hands detected, the menu is set to a faded state and a dwell timer starts. After this dwell timer finished, the menu disappears.
