@@ -84,3 +84,7 @@ This project is a static web application and can be run locally using any simple
            <sub>Presentation steering slider in action</sub>
        </div>
    </div>
+  
+
+# Ressources 
+- some of the icons from the menu are from https://www.flaticon.com/free-icons

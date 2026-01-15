@@ -44,6 +44,12 @@ export const interactionState = {
  */
 const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
 
+/** Saves the previously loaded icons so that they do not have to be fetched for every frame
+ *
+ * @type {{}}
+ */
+const iconCache = {};
+
 /** calculates dwell times on hovering a menu item
  * - handles menu selection
  * - if menu item is hovered & slider is not in interactive mode -> start dwell -> if completed -> do action/open submenu
@@ -220,11 +226,23 @@ function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
     const labelX = x + Math.cos(midAngle) * radius * 0.6;
     const labelY = y + Math.sin(midAngle) * radius * 0.6;
 
-    ctx.fillStyle = "black";                        // color of label
-    ctx.font = "24px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(menu.items[i].label, labelX, labelY);
+    const icon = getIconForLabel(menu.items[i].label);
+    const size = menu.items[i].label === "H, V, L einstellen" ?  110 : 32; // Icon size => exception: bigger icon size TODO: make this more efficient
+    if (icon) {
+        ctx.drawImage(
+            icon,
+            labelX - size / 2,
+            labelY - size / 2,
+            size,
+            size
+        );
+    } else {
+        ctx.fillStyle = "black";                        // color of label
+        ctx.font = "24px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(menu.items[i].label, labelX, labelY);
+    }
 }
 
 /** Helper function that draws hover animation if the hovered segment is not already selected
@@ -476,12 +494,18 @@ function drawSubMenu() {
         const mid = (a0 + a1) / 2;
         const r = (innerRadius + outerRadius) / 2;
 
-        ctx.fillStyle = "black";
-        ctx.fillText(
-            subItems[i].label,
-            menu.x + Math.cos(mid) * r,
-            menu.y + Math.sin(mid) * r
-        );
+        const icon = getIconForLabel(subItems[i].label);
+        const size = 24;
+
+        const ix = menu.x + Math.cos(mid) * r;
+        const iy = menu.y + Math.sin(mid) * r;
+
+        if (icon) {
+            ctx.drawImage(icon, ix - size / 2, iy - size / 2, size, size);
+        } else {
+            ctx.fillStyle = "black";
+            ctx.fillText(subItems[i].label, ix, iy);
+        }
 
         // highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
         if (i === interactionState.sub.hover || i === interactionState.sub.selected && sliderState.visible && uiMode.current === "slider"){
@@ -579,4 +603,37 @@ export function itemHasSlider(item) {
 function itemHasSubItems(item){
     if (!item) return
     return Object.hasOwn(item, 'subItems')
+}
+
+/**
+ * Loads an icon by label name (cached)
+ * @param {string} label
+ * @returns {HTMLImageElement}
+ */
+function getIconForLabel(label) {
+    if (!label) return null;
+
+    // if icon is already known (loaded or error)
+    if (iconCache[label]) return iconCache[label].loaded ? iconCache[label].img : null;
+
+    const img = new Image();
+
+    iconCache[label] = {
+        img,
+        loaded: false,
+        failed: false
+    };
+
+    img.onload = () => {
+        iconCache[label].loaded = true;
+    };
+
+    img.onerror = () => {
+        iconCache[label].failed = true;
+        console.warn("ICON NOT FOUND:", label);
+    };
+
+    img.src = `./images/label-icons/${label}.png`;
+
+    return img;
 }
