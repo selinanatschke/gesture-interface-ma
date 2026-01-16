@@ -134,8 +134,9 @@ export function drawMarkingMenu() {
         const endAngle = startAngle + angleStep;
 
         const isHighlighted = isMainSegmentHighlighted(i);
+        const isSelected = i === interactionState.main.selected;
 
-        drawSegment(x, y, radius, startAngle, endAngle, isHighlighted);
+        drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHighlighted);
         drawMainLabel(i, x, y, radius, startAngle, endAngle);
         drawHoverFill(i, x, y, radius, startAngle, endAngle);
     }
@@ -197,12 +198,17 @@ function isMainSegmentHighlighted(i) {
  * @param radius
  * @param startAngle
  * @param endAngle
- * @param highlighted
+ * @param isSelected
+ * @param isHovered
  */
-function drawSegment(x, y, radius, startAngle, endAngle, highlighted) {
-    ctx.fillStyle = highlighted
-        ? "rgba(255, 0, 255, 0.3)"
-        : "rgba(0, 0, 0, 0.05)";
+function drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHovered) {
+    if (isSelected) {
+        ctx.fillStyle = "rgba(255, 0, 255, 0.5)";      // selected
+    } else if (isHovered) {
+        ctx.fillStyle = "rgba(255, 0, 255, 0.3)";       // hovered
+    } else {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";          // default
+    }
 
     ctx.beginPath();
     ctx.moveTo(x, y);
@@ -509,7 +515,7 @@ function drawSubMenu() {
 
         // highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
         if (i === interactionState.sub.hover || i === interactionState.sub.selected && sliderState.visible && uiMode.current === "slider"){
-            ctx.fillStyle = "rgba(255, 0, 255, 0.3)";
+            ctx.fillStyle = i === interactionState.sub.selected ? "rgba(255, 0, 255, 0.5)" : "rgba(255, 0, 255, 0.3)";      // if selection confirmed => darker tone
             ctx.fill();
         }
 
