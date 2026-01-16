@@ -1,4 +1,4 @@
-import { dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked } from "./timings.js";
+import { drawHandIcon, dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked} from "./timings.js";
 import {
     drawMarkingMenu,
     updateSubMenuState,
@@ -48,6 +48,7 @@ hands.onResults((results) => {
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+    drawHandIcon(handDetected);     // draw hand Icon
     handleDwellAndIdle(handDetected, now);
     if(!menuUnlocked) return;
 

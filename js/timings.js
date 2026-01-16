@@ -12,6 +12,10 @@ export let menuUnlocked = false;
 let activationStartTime = null;
 const ACTIVATION_DURATION = 3000; // 3s Freischalt-Dwell
 
+// hand icon
+const handIcon = new Image();
+handIcon.src = "./images/hand.png";
+
 /**
  * Methods that handles dwell and idle state actions
  * - resets timers if hands are detected
@@ -138,4 +142,35 @@ export function drawDwellRing() {
 
 export function setMenuUnlocked(value){
     menuUnlocked = value;
+}
+
+/**
+ * This function draws the hand icon. If a hand is detected, the opacity is 1, otherwise 0.5
+ * @param handDetected
+ */
+export function drawHandIcon(handDetected) {
+    if (!handIcon.complete) return;
+
+    const radius = 30;
+    const margin = 20;
+
+    const centerX = canvas.width - margin - radius;
+    const centerY = margin + radius;
+
+    const iconSize = 30; // Größe des Icons
+
+    ctx.save();
+
+    // depends on hand detection
+    ctx.globalAlpha = handDetected ? 1.0 : 0.5;
+
+    ctx.drawImage(
+        handIcon,
+        centerX - iconSize / 2,
+        centerY - iconSize / 2,
+        iconSize,
+        iconSize
+    );
+
+    ctx.restore();
 }
