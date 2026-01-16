@@ -1,5 +1,11 @@
 import { ctx } from "./main.js";
-import { getHoveredItem, interactionState, itemHasSlider, menu } from "./menu.js";
+import {
+    getHoveredItem,
+    getSliderPlacementForMainItem,
+    interactionState,
+    itemHasSlider,
+    menu
+} from "./menu.js";
 import { isPinched, updateIsPinched } from "./gestures.js";
 import { getCursorDistance } from "./cursor.js";
 import { dwellProgress } from "./timings.js";
@@ -19,7 +25,7 @@ export const sliderState = {
     visible: false,
     preview: false,
     previewOwner: null,
-    selectedSliderType: null
+    selectedSliderType: null,
 };
 
 /** This determines what is visible and interactive
@@ -222,6 +228,8 @@ export function showSlider(type) {
     sliderState.visible = true;
     sliderState.preview = false;
 
+    const placement = getSliderPlacementForMainItem(type);
+
     // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
         type: type,
@@ -231,20 +239,8 @@ export function showSlider(type) {
             vibration: "Vibration",
             presentation: "Wiedergabe vor-/zurückspulen"
         }[type],
-
-        orientation: {
-            volume: "vertical",
-            brightness: "vertical",
-            vibration: "horizontal",
-            presentation: "horizontal"
-        }[type],
-
-        position: {
-            volume: "right",
-            brightness: "left",
-            vibration: "bottom",
-            presentation: "bottom"
-        }[type]
+        orientation: placement.orientation,
+        position: placement.position
     };
 
     // set slider width and height depending on orientation
@@ -273,6 +269,11 @@ export function showSlider(type) {
         case "bottom":
             sliderX = menu.x - sliderWidth / 2;
             sliderY = menu.y + menu["radius"] + 130;
+            break;
+
+        case "top":
+            sliderX = menu.x - sliderWidth / 2;
+            sliderY = menu.y - menu["radius"] - sliderHeight - 240;
             break;
     }
 }

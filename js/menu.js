@@ -573,7 +573,7 @@ function handleMenuAction(action) {
  * @param stateItem
  * @returns {boolean}
  */
-function stateItemIsSet(stateItem){
+export function stateItemIsSet(stateItem){
     return stateItem > -1 && stateItem !== undefined && stateItem !== null
 }
 
@@ -600,7 +600,7 @@ export function itemHasSlider(item) {
  * @param item
  * @returns {boolean}
  */
-function itemHasSubItems(item){
+export function itemHasSubItems(item){
     if (!item) return
     return Object.hasOwn(item, 'subItems')
 }
@@ -636,4 +636,55 @@ function getIconForLabel(label) {
     img.src = `./images/label-icons/${label}.png`;
 
     return img;
+}
+
+/**
+ * helps determine how and where to display the sliders
+ * @param type
+ * @returns {{position: string, orientation: string}}
+ */
+export function getSliderPlacementForMainItem(type) {
+    // get main item that opened slider type
+    const mainItem = menu.items.find(item => {
+        if(itemHasSlider(item)) return item.action.type === type
+    });
+    const mainItemIndexThatOpenedSlider = mainItem ? menu.items.indexOf(mainItem) : interactionState.main.selected;
+
+    const angle = getMainSegmentMidAngle(mainItemIndexThatOpenedSlider);
+    const position = getPlacementFromAngle(angle);
+    const orientation = position === "left" || position === "right" ? "vertical" : "horizontal";
+
+    return {
+        position,      // "top" | "bottom" | "left" | "right"
+        orientation     // "horizontal" | "vertical"
+    };
+}
+
+
+/**
+ *  Helps to determine if the sliders should be positioned left, right, bottom or top later
+ * @param index
+ * @returns {number}
+ */
+function getMainSegmentMidAngle(index) {
+    const angleStep = (Math.PI * 2) / menu.items.length;
+    const startAngle = index * angleStep;
+    const endAngle = startAngle + angleStep;
+    return (startAngle + endAngle) / 2;
+}
+
+/** Returns whether the slider should be positioned "top" | "bottom" | "left" | "right"
+ *
+ * @param angle
+ * @returns {string}
+ */
+function getPlacementFromAngle(angle) {
+    const x = Math.cos(angle);
+    const y = Math.sin(angle);
+
+    if (Math.abs(x) > Math.abs(y)) {
+        return x > 0 ? "right" : "left";
+    } else {
+        return y > 0 ? "bottom" : "top";
+    }
 }
