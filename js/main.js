@@ -1,4 +1,4 @@
-import { drawHandIcon, dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked} from "./timings.js";
+import { drawHandIcon, dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked } from "./timings.js";
 import {
     drawMarkingMenu,
     updateSubMenuState,
@@ -9,7 +9,7 @@ import {
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, updateSlider } from "./slider.js";
-import { updateIsGrabbing } from "./gestures.js";
+import { updateIsGrabbing, updateIsOpenHand} from "./gestures.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -49,6 +49,7 @@ hands.onResults((results) => {
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     drawHandIcon(handDetected);     // draw hand Icon
+    updateIsOpenHand(results, handDetected);
     handleDwellAndIdle(handDetected, now);
     if(!menuUnlocked) return;
 

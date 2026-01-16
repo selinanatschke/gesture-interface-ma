@@ -1,4 +1,5 @@
 import {ctx} from "./main.js";
+import { isOpenHand } from "./gestures.js";
 
 // idle dwell for no interaction
 let idleStartTime = null;       // saves start time of idle timer
@@ -55,7 +56,7 @@ export function handleDwellAndIdle(handDetected, now){
  */
 function handleActivationDwell(handDetected, now) {
 
-    if (!handDetected) {
+    if (!handDetected || !isOpenHand) {
         activationStartTime = null;
         dwellProgress = 0;
         return;
