@@ -319,13 +319,14 @@ export function hideSlider() {
 /**
  * activates slider manipulation is slider ui mode is active
  * @param results
+ * @param handDetected
  */
-export function updateSlider(results) {
+export function updateSlider(results, handDetected) {
     if(!sliderState.selectedSliderType && !sliderState.preview) return;
 
     // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values
     if (sliderState.visible && uiMode.current === "slider") {
-        updateIsPinched(results);
+        updateIsPinched(results, handDetected);
         updateSliderValueFromHand(results);
     }
 

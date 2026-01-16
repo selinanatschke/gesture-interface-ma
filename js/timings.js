@@ -1,5 +1,5 @@
 import {ctx} from "./main.js";
-import { isOpenHand } from "./gestures.js";
+import { isPinched, isGrabbing, isOpenHand } from "./gestures.js";
 
 // idle dwell for no interaction
 let idleStartTime = null;       // saves start time of idle timer
@@ -13,9 +13,13 @@ export let menuUnlocked = false;
 let activationStartTime = null;
 const ACTIVATION_DURATION = 3000; // 3s Freischalt-Dwell
 
-// hand icon
+// gesture icons
 const handIcon = new Image();
-handIcon.src = "./images/hand.png";
+handIcon.src = "./images/gestures/hand.png";
+const pinchIcon = new Image();
+pinchIcon.src = "./images/gestures/pinch.png";
+const grabIcon = new Image();
+grabIcon.src = "./images/gestures/grab.png";
 
 /**
  * Methods that handles dwell and idle state actions
@@ -149,7 +153,7 @@ export function setMenuUnlocked(value){
  * This function draws the hand icon. If a hand is detected, the opacity is 1, otherwise 0.5
  * @param handDetected
  */
-export function drawHandIcon(handDetected) {
+export function drawGestureIcon(handDetected) {
     if (!handIcon.complete) return;
 
     const radius = 30;
@@ -166,7 +170,7 @@ export function drawHandIcon(handDetected) {
     ctx.globalAlpha = handDetected ? 1.0 : 0.5;
 
     ctx.drawImage(
-        handIcon,
+        getGestureIcon(),
         centerX - iconSize / 2,
         centerY - iconSize / 2,
         iconSize,
@@ -174,4 +178,10 @@ export function drawHandIcon(handDetected) {
     );
 
     ctx.restore();
+}
+
+function getGestureIcon() {
+    if (isPinched) return pinchIcon;
+    if (isGrabbing) return grabIcon;
+    return handIcon;
 }

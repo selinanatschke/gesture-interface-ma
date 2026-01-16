@@ -1,4 +1,10 @@
-import { drawHandIcon, dwellProgress, handleDwellAndIdle, menuUnlocked, setMenuUnlocked } from "./timings.js";
+import {
+    drawGestureIcon,
+    dwellProgress,
+    handleDwellAndIdle,
+    menuUnlocked,
+    setMenuUnlocked
+} from "./timings.js";
 import {
     drawMarkingMenu,
     updateSubMenuState,
@@ -48,7 +54,7 @@ hands.onResults((results) => {
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
-    drawHandIcon(handDetected);     // draw hand Icon
+    drawGestureIcon(handDetected);     // draw hand Icon
     updateIsOpenHand(results, handDetected);
     handleDwellAndIdle(handDetected, now);
     if(!menuUnlocked) return;
@@ -71,7 +77,7 @@ hands.onResults((results) => {
 
             // if slider is active, do not update menu
             if (uiMode.current === "slider") {
-                updateSlider(results);
+                updateSlider(results, handDetected);
             } else {
                 updateCursor(results);
                 interactionState.main.hover = getActiveMainSegment();
