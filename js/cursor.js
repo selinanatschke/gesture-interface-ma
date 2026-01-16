@@ -1,5 +1,5 @@
 import { ctx } from "./main.js";
-import { sliderState } from "./slider.js";
+import { uiMode } from "./slider.js";
 import { menu } from "./menu.js"
 
 /** cursor element that holds the position of the cursor
@@ -31,7 +31,7 @@ export function updateCursor(results){
  * @param y
  */
 function drawCursor(x, y) {
-    if (sliderState.visible) ctx.globalAlpha = 0.5;
+    if (uiMode.current === "slider") return; // do not draw cursor if slider is active
 
     ctx.fillStyle = "purple";
     ctx.beginPath();

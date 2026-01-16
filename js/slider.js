@@ -7,7 +7,6 @@ import {
     menu
 } from "./menu.js";
 import { isPinched, updateIsPinched } from "./gestures.js";
-import { getCursorDistance } from "./cursor.js";
 import { dwellProgress } from "./timings.js";
 
 let sliderConfig = null;
@@ -119,21 +118,6 @@ export function handlePreview(level){
             hideSlider();
             sliderState.preview = false;
             sliderState.previewOwner = null;
-        }
-    }
-
-    // preview
-    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1){
-        const hoveredItem =
-            (level === 0 || level === "main") ? getHoveredItem("main") : getHoveredItem("sub");
-        if (!itemHasSlider(hoveredItem)) return;
-        const owner =
-            (level === 0 || level === "main")
-                ? { level: 0, index: interactionState.main.hover }
-                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
-
-        if (!sliderState.preview) {
-            showSliderPreview(hoveredItem.action.type, owner);
         }
     }
 
@@ -283,6 +267,8 @@ export function showSlider(type) {
  * @param results
  */
 export function updateSliderValueFromHand(results) {
+    if (!sliderConfig) return;
+
     // only accept modification if slider is visible and hand is pinched
     if (!isPinched) {
         lastHandPositionX = null;
@@ -320,35 +306,14 @@ export function updateSliderValueFromHand(results) {
 }
 
 /**
- * updates UI Mode if cursor is in menu or in slider if slider is opened
- */
-export function updateUiMode() {
-    // if slider is not visible, menu is focused
-    if (!sliderState.visible) {
-        uiMode.current = "menu"
-        return;
-    }
-
-    // preview state: slider is always faded (not interactive yet)
-    if (sliderState.preview) {
-        uiMode.current = "menu"
-        return;
-    }
-
-    // cursor back in menu?
-    if (getCursorDistance() < menu["radius"] + 60 && !isPinched) {
-        uiMode.current = "menu"
-    } else {
-        uiMode.current = "slider"
-    }
-}
-
-/**
  * hides the slider
  */
 export function hideSlider() {
     sliderState.preview = false;
     sliderState.visible = false;
+    sliderState.selectedSliderType = null;
+    lastHandPositionX = null;
+    lastHandPositionY = null;
 }
 
 /**
@@ -357,8 +322,6 @@ export function hideSlider() {
  */
 export function updateSlider(results) {
     if(!sliderState.selectedSliderType && !sliderState.preview) return;
-
-    updateUiMode();
 
     // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values
     if (sliderState.visible && uiMode.current === "slider") {
@@ -381,7 +344,6 @@ export function showSliderPreview(type, owner) {
     if (!type) return;
 
     showSlider(type);
-    sliderState.visible = true;
     sliderState.preview = true;
     uiMode.current = "menu"
     sliderState.previewOwner = owner

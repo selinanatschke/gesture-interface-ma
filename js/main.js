@@ -8,7 +8,7 @@ import {
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
-import { drawSliderCanvas, hideSlider, sliderState, updateSlider } from "./slider.js";
+import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
 import { updateIsGrabbing, updateIsOpenHand} from "./gestures.js";
 
 const video = document.getElementById("video");
@@ -61,17 +61,23 @@ hands.onResults((results) => {
         interactionState.sub.selected = null;
         sliderState.selectedSliderType = null;
         hideSlider();
+        uiMode.current = "menu";
     }
 
     // if dwell timer is not active or <1, paint menu
     if (dwellProgress < 1) {
         if (handDetected) {
             updateIsGrabbing(results, handDetected);
-            updateCursor(results);
-            updateSlider(results);
-            interactionState.main.hover = getActiveMainSegment();
-            updateHoverFill(now, 0);    // main manu
-            updateHoverFill(now, 1);    // sub menu
+
+            // if slider is active, do not update menu
+            if (uiMode.current === "slider") {
+                updateSlider(results);
+            } else {
+                updateCursor(results);
+                interactionState.main.hover = getActiveMainSegment();
+                updateHoverFill(now, 0);    // main manu
+                updateHoverFill(now, 1);    // sub menu
+            }
         }
         drawMarkingMenu();
 

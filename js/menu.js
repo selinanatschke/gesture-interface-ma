@@ -71,15 +71,12 @@ export function updateHoverFill(now, level) {
         interactionState.main.selected = null;
     }
 
-    // prevent dwell interaction while slider is used + only active sliders block hover (preview is not an active slider)
-    if (sliderState.visible && uiMode.current === "slider") return;
-
     // do we need to abort hover animation?
     const needsReset = level === "main" ?
         // level 0: nothing hovered OR selection already made OR switch of hovered segment -> reset
-        stateItemIsNotSet(interactionState.main.hover) /*|| interactionState[level].hover === interactionState[level].selected*/ || interactionState.main.hover !== interactionState.main.previousHover :
-        // level 1: if no main menu item was selected OR no submenu item is hovered OR the slider is visible and cursor is in slider (-> prevents accidental selection of other item while using the slider), reset all dwell timers and return
-        stateItemIsNotSet(interactionState.main.selected) || stateItemIsNotSet(interactionState.sub.hover) || sliderState.visible && uiMode.current === "slider"
+        stateItemIsNotSet(interactionState.main.hover) || interactionState.main.hover !== interactionState.main.previousHover :
+        // level 1: if no main menu item was selected OR no submenu item is hovered, reset all dwell timers and return
+        stateItemIsNotSet(interactionState.main.selected) || stateItemIsNotSet(interactionState.sub.hover)
 
     const progressFinished = updateDwell(needsReset, level, now);
 
@@ -100,9 +97,11 @@ export function updateHoverFill(now, level) {
  * @param handDetected
  */
 export function updateSubMenuState(handDetected){
+    if (uiMode.current === "slider") return;
+
     // highlight submenu if hand is detected && an element from the main menu was selected
     if (handDetected && stateItemIsSet(interactionState.main.selected)) {
-        interactionState.sub.hover = getActiveSubSegment(menu, cursor);          // determines which subsegment cursor is in
+        interactionState.sub.hover = getActiveSubSegment();          // determines which subsegment cursor is in
     } else {
         interactionState.sub.hover = null;
     }
@@ -152,14 +151,12 @@ export function drawMarkingMenu() {
     ctx.globalAlpha = 1;
 }
 
-/** helper function that makes menu faded if cursor is in slider area (user interacts)
+/** helper function that makes menu faded if slider is active
  * - makes sure if dwell timer for no hands recognized is also fading the menus opacity
  */
 function setMenuGlobalAlpha() {
-    if (uiMode.current === "menu") {
-        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1;
-    } else if (sliderState.visible) {     // if slider is visible, menu should be greyed out
-        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 0.5;
+    if (uiMode.current === "slider") {  // always fade menu if slider is active
+        ctx.globalAlpha = 0.25
     } else {
         ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1 ;
     }
@@ -187,7 +184,6 @@ function isMainSegmentHighlighted(i) {
     return (
         i === activeMainSegment                                   // normal hover
         || (cursorInSubMenu && i === interactionState.main.selected)   // cursor in submenu (+ submenu exists)
-        || (sliderState.visible && i === interactionState.main.selected && uiMode.current === "slider")     // slider keeps highlight
     );
 }
 
@@ -296,11 +292,9 @@ function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
  * @returns {number|null}
  */
 export function getActiveMainSegment() {
-    // if slider is visible and slider is not faded (in use) the activeMainSegment should be the one that opened the slider
-    if( sliderState.visible && uiMode.current === "slider" ) return interactionState.main.selected;
+    if (uiMode.current === "slider") return interactionState.main.selected;
 
-    const distance = getCursorDistance(menu, cursor);
-
+    const distance = getCursorDistance();
     const outerRadius = menu["radius"];
 
     // cursor not in menu
@@ -308,7 +302,7 @@ export function getActiveMainSegment() {
         return -1;
     }
 
-    const angle = getCursorAngle(menu, cursor);
+    const angle = getCursorAngle();
     const angleStep = (Math.PI * 2) / menu.items.length;
 
     const result = Math.floor(angle / angleStep);
@@ -380,34 +374,11 @@ function isCursorInSubMenuRing() {
     return distance >= inner && distance <= outer;
 }
 
-/** This method checks if the cursor is still in the submenu and if the selection has to be resetted.
- * The selection must be resetted, if:
- * - the cursor is not in the menu, nor in a submenu and it is no slider visible
- * @returns {boolean}
- */
-function checkIfCursorIsInMenu() {
-    const distance = getCursorDistance();
-    const mainMenuCircle = menu["radius"];
-    const cursorInMenu =  distance <= mainMenuCircle;
-
-    if (cursorInMenu) {
-        return true;
-    } else {
-        if(!isCursorInSubMenuRing() && !sliderState.visible){
-            interactionState.main.selected = null;
-        }
-        return false;
-    }
-}
-
 /** helper function to calculate which sub segment is hovered on based on the angle and distance of cursor to the center
  *
  * @returns {number|null}
  */
 function getActiveSubSegment() {
-    // if slider is visible and slider is not faded (in use) the activeSubSegment should be the one that opened the slider
-    if( sliderState.visible && uiMode.current === "slider" ) return interactionState.sub.selected;
-
     const mainIndex = interactionState.main.selected;
     if (stateItemIsNotSet(mainIndex)) return -1;
 
@@ -514,7 +485,7 @@ function drawSubMenu() {
         }
 
         // highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
-        if (i === interactionState.sub.hover || i === interactionState.sub.selected && sliderState.visible && uiMode.current === "slider"){
+        if (i === interactionState.sub.hover || i === interactionState.sub.selected){
             ctx.fillStyle = i === interactionState.sub.selected ? "rgba(255, 0, 255, 0.5)" : "rgba(255, 0, 255, 0.3)";      // if selection confirmed => darker tone
             ctx.fill();
         }
@@ -564,6 +535,7 @@ function handleMenuAction(action) {
     switch (action.name) {
         case "open_slider":
             sliderState.preview = false;
+            uiMode.current = "slider";
             openSelectedSlider(action.type);
             break;
 
