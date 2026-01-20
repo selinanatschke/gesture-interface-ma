@@ -6,7 +6,7 @@ import {
     itemHasSlider,
     menu
 } from "./menu.js";
-import { isPinched, updateIsPinched } from "./gestures.js";
+import { isPinched } from "./gestures.js";
 import { dwellProgress } from "./timings.js";
 
 let sliderConfig = null;
@@ -326,7 +326,6 @@ export function updateSlider(results, handDetected) {
 
     // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values
     if (sliderState.visible && uiMode.current === "slider") {
-        updateIsPinched(results, handDetected);
         updateSliderValueFromHand(results);
     }
 

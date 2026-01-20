@@ -602,7 +602,12 @@ function getIconForLabel(label) {
     if (!label) return null;
 
     // if icon is already known (loaded or error)
-    if (iconCache[label]) return iconCache[label].loaded ? iconCache[label].img : null;
+    const cached = iconCache[label];
+    if (cached) {
+        if (cached.loaded) return cached.img;
+        if (cached.failed) return null;
+        return null; // noch am Laden
+    }
 
     const img = new Image();
 
@@ -623,7 +628,7 @@ function getIconForLabel(label) {
 
     img.src = `./images/label-icons/${label}.png`;
 
-    return img;
+    return null;
 }
 
 /**

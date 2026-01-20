@@ -9,7 +9,18 @@ export let isOpenHand = false;
 export let gestureThresholds = {
     pinchThreshold: 0.05,
     openPalmThreshold: 0.3,
-    grabThreshold: 0.10
+    grabThreshold: 0.13
+}
+
+/**
+ * general function to detect gestures
+ * @param results
+ * @param handDetected
+ */
+export function updateGestures(results, handDetected){
+    updateIsOpenHand(results, handDetected)
+    updateIsPinched(results, handDetected)
+    updateIsGrabbing(results, handDetected)
 }
 
 /** Detects if pinch gesture is used
@@ -19,7 +30,7 @@ export let gestureThresholds = {
  * @param results
  * @param handDetected
  */
-export function updateIsPinched (results, handDetected) {
+function updateIsPinched (results, handDetected) {
     if(!handDetected){
         isPinched = false;
         return;
@@ -37,37 +48,13 @@ export function updateIsPinched (results, handDetected) {
  * @param results
  * @param handDetected
  */
-export function updateIsGrabbing(results, handDetected) {
-
+function updateIsGrabbing(results, handDetected) {
     if(!handDetected){
         isGrabbing = false;
         return;
     }
 
-    const hand = results.multiHandLandmarks[0];
-    const wrist = hand[0];
-
-    // Finger tips
-    const fingerTips = [
-        hand[8],   // index
-        hand[12],  // middle
-        hand[16],  // ring
-        hand[20]   // pinky
-    ];
-
-    // average distance of finger tips to palm
-    let sumDistance = 0;
-
-    for (const tip of fingerTips) {
-        const d = Math.sqrt(
-            Math.pow(tip.x - wrist.x, 2) +
-            Math.pow(tip.y - wrist.y, 2) +
-            Math.pow(tip.z - wrist.z, 2)
-        );
-        sumDistance += d;
-    }
-
-    const avgDistance = sumDistance / fingerTips.length;
+    const avgDistance = calculateAvgFingerDistance(results);
 
     // grab = all fingers near palm
     isGrabbing = avgDistance < gestureThresholds.grabThreshold;
@@ -78,12 +65,26 @@ export function updateIsGrabbing(results, handDetected) {
  * @param results
  * @param handDetected
  */
-export function updateIsOpenHand(results, handDetected) {
+function updateIsOpenHand(results, handDetected) {
     if (!handDetected) {
         isOpenHand = false;
         return;
     }
 
+    const avgDistance = calculateAvgFingerDistance(results)
+
+    const fingersExtended = avgDistance > gestureThresholds.openPalmThreshold;
+
+    // Open hand = finger extended + no grab + no pinch
+    isOpenHand = fingersExtended && !isGrabbing && !isPinched;
+}
+
+/**
+ * Helper function to calculate the average distance of the fingers to the palm
+ * @param results
+ * @returns {number}
+ */
+function calculateAvgFingerDistance(results){
     const hand = results.multiHandLandmarks[0];
     const wrist = hand[0];
 
@@ -106,9 +107,5 @@ export function updateIsOpenHand(results, handDetected) {
         sumDistance += d;
     }
 
-    const avgDistance = sumDistance / fingerTips.length;
-    const fingersExtended = avgDistance > gestureThresholds.openPalmThreshold;
-
-    // Open hand = finger extended + no grab + no pinch
-    isOpenHand = fingersExtended && !isGrabbing && !isPinched;
+    return sumDistance / fingerTips.length;
 }

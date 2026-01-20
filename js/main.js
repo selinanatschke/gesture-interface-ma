@@ -16,7 +16,7 @@ import {
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
-import { gestureThresholds, updateIsGrabbing, updateIsOpenHand } from "./gestures.js";
+import { gestureThresholds, updateGestures } from "./gestures.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -126,8 +126,8 @@ hands.onResults((results) => {
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
+    updateGestures(results, handDetected)
     drawGestureIcon(handDetected);     // draw hand Icon
-    updateIsOpenHand(results, handDetected);
     handleDwellAndIdle(handDetected, now);
     if(!menuUnlocked) return;
 
@@ -145,8 +145,6 @@ hands.onResults((results) => {
     // if dwell timer is not active or <1, paint menu
     if (dwellProgress < 1) {
         if (handDetected) {
-            updateIsGrabbing(results, handDetected);
-
             // if slider is active, do not update menu
             if (uiMode.current === "slider") {
                 updateSlider(results, handDetected);

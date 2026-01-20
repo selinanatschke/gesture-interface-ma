@@ -170,7 +170,7 @@ export function drawGestureIcon(handDetected) {
     ctx.globalAlpha = handDetected ? 1.0 : 0.5;
 
     ctx.drawImage(
-        getGestureIcon(),
+        getGestureIcon(handDetected),
         centerX - iconSize / 2,
         centerY - iconSize / 2,
         iconSize,
@@ -180,7 +180,13 @@ export function drawGestureIcon(handDetected) {
     ctx.restore();
 }
 
-function getGestureIcon() {
+/**
+ * Method that returns which icon has to be displayed in the dwell circle
+ * @param handDetected
+ * @returns {HTMLImageElement}
+ */
+function getGestureIcon(handDetected) {
+    if(!handDetected) return handIcon;
     if (isPinched) return pinchIcon;
     if (isGrabbing) return grabIcon;
     return handIcon;
