@@ -2,6 +2,16 @@ export let isPinched;
 export let isGrabbing = false;
 export let isOpenHand = false;
 
+/**
+ * Thresholds are saved to debug correct thresholds depending on distances
+ * @type {{pinchThreshold: number, openPalmThreshold: number, grabThreshold: number}}
+ */
+export let gestureThresholds = {
+    pinchThreshold: 0.05,
+    openPalmThreshold: 0.3,
+    grabThreshold: 0.10
+}
+
 /** Detects if pinch gesture is used
  * - since pinch is not a gesture that mediapipe detects by itself, this was used to detect a pinch gesture:
  *   https://medium.com/@c-damien/practical-gesture-detection-with-mediapipe-in-your-browser-283c7c1f09f0
@@ -19,7 +29,7 @@ export function updateIsPinched (results, handDetected) {
     const thumbTip = results.multiHandLandmarks[0][4]; const indexTip = results.multiHandLandmarks[0][8];
     const distance = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2) + Math.pow(thumbTip.z - indexTip.z, 2));
 
-    isPinched = distance < 0.05;
+    isPinched = distance < gestureThresholds.pinchThreshold;
 }
 
 /** Detects if grab gesture is used
@@ -60,7 +70,7 @@ export function updateIsGrabbing(results, handDetected) {
     const avgDistance = sumDistance / fingerTips.length;
 
     // grab = all fingers near palm
-    isGrabbing = avgDistance < 0.10;
+    isGrabbing = avgDistance < gestureThresholds.grabThreshold;
 }
 
 /** Detects if an open palm gesture is used
@@ -97,7 +107,7 @@ export function updateIsOpenHand(results, handDetected) {
     }
 
     const avgDistance = sumDistance / fingerTips.length;
-    const fingersExtended = avgDistance > 0.3;
+    const fingersExtended = avgDistance > gestureThresholds.openPalmThreshold;
 
     // Open hand = finger extended + no grab + no pinch
     isOpenHand = fingersExtended && !isGrabbing && !isPinched;

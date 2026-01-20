@@ -16,7 +16,7 @@ import {
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
-import { updateIsGrabbing, updateIsOpenHand} from "./gestures.js";
+import { gestureThresholds, updateIsGrabbing, updateIsOpenHand } from "./gestures.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -25,7 +25,8 @@ export const ctx = canvas.getContext("2d");
 const MOVE_STEP = 20;   // steps to rescale menu
 
 /**
- * This method uses keyboard keys to scale the radius of the menu and move the menu
+ * This method uses keyboard keys to scale the radius of the menu and move the menu.
+ * This method can also increase/decrease gesture detection thresholds
  * This is only for testing and debugging and NO user should ever use this.
  */
 window.addEventListener("keydown", (e) => {
@@ -43,17 +44,40 @@ window.addEventListener("keydown", (e) => {
         case "ArrowLeft":
             menu.x -= MOVE_STEP;
             break;
-
         case "ArrowRight":
             menu.x += MOVE_STEP;
             break;
-
         case "ArrowUp":
             menu.y -= MOVE_STEP;
             break;
-
         case "ArrowDown":
             menu.y += MOVE_STEP;
+            break;
+
+        // increase/decrease gesture thresholds
+        case "p":
+            gestureThresholds.pinchThreshold += 0.1;
+            console.log("pinchThreshold", gestureThresholds.pinchThreshold)
+            break;
+        case "h":
+            gestureThresholds.pinchThreshold -= 0.1;
+            console.log("pinchThreshold", gestureThresholds.pinchThreshold)
+            break;
+        case "g":
+            gestureThresholds.grabThreshold += 0.1;
+            console.log("grabThreshold", gestureThresholds.grabThreshold)
+            break;
+        case "b":
+            gestureThresholds.grabThreshold -= 0.1;
+            console.log("grabThreshold", gestureThresholds.grabThreshold)
+            break;
+        case "o":
+            gestureThresholds.openPalmThreshold += 0.1;
+            console.log("openPalmThreshold", gestureThresholds.openPalmThreshold)
+            break;
+        case "m":
+            gestureThresholds.openPalmThreshold -= 0.1;
+            console.log("openPalmThreshold", gestureThresholds.openPalmThreshold)
             break;
     }
 });
