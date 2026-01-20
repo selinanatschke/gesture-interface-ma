@@ -7,6 +7,16 @@ import { isGrabbing } from "./gestures.js";
 const response = await fetch("./menu.json");
 export const menu = await response.json();
 
+/**
+ *  Scale steps for administrating the size of the application
+ * @type {{radiusStep: number, minRadius: number, maxRadius: number}}
+ */
+export const UI_SCALE = {
+    radiusStep: 20,
+    minRadius: 120,
+    maxRadius: 500
+};
+
 /** State that saves all information about the menu levels
  * currently: two levels: main, sub (can later be expanded with subsub, or 2)
  *

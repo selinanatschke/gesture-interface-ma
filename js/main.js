@@ -10,7 +10,8 @@ import {
     updateSubMenuState,
     updateHoverFill,
     getActiveMainSegment,
-    interactionState
+    interactionState,
+    UI_SCALE
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
@@ -20,6 +21,53 @@ import { updateIsGrabbing, updateIsOpenHand} from "./gestures.js";
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
 export const ctx = canvas.getContext("2d");
+
+const MOVE_STEP = 20;   // steps to rescale menu
+
+/**
+ * This method uses keyboard keys to scale the radius of the menu and move the menu
+ * This is only for testing and debugging and NO user should ever use this.
+ */
+window.addEventListener("keydown", (e) => {
+    switch (e.key) {
+
+        // scale menu with + and -
+        case "+":
+            resizeMenu(UI_SCALE.radiusStep);
+            break;
+        case "-":
+            resizeMenu(-UI_SCALE.radiusStep);
+            break;
+
+        // move menu with arrow keys
+        case "ArrowLeft":
+            menu.x -= MOVE_STEP;
+            break;
+
+        case "ArrowRight":
+            menu.x += MOVE_STEP;
+            break;
+
+        case "ArrowUp":
+            menu.y -= MOVE_STEP;
+            break;
+
+        case "ArrowDown":
+            menu.y += MOVE_STEP;
+            break;
+    }
+});
+
+function resizeMenu(delta) {
+    const newRadius = menu.radius + delta;
+
+    if (
+        newRadius < UI_SCALE.minRadius ||
+        newRadius > UI_SCALE.maxRadius
+    ) return;
+
+    menu.radius = newRadius;
+}
 
 /**
  * Function that adapts canvas to window size
