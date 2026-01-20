@@ -617,7 +617,9 @@ function getIconForLabel(label) {
     };
 
     img.onerror = () => {
-        iconCache[label].failed = true;
+        // TODO fix
+        // iconCache[label].failed = true;
+        console.log("fix ? ")
         console.warn("ICON NOT FOUND:", label);
     };
 
