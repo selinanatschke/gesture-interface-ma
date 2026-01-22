@@ -16,7 +16,7 @@ import {
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
-import { gestureThresholds, updateGestures } from "./gestures.js";
+import { gestureThresholds, updateGestures, drawGrabHint } from "./gestures.js";
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");
@@ -148,6 +148,7 @@ hands.onResults((results) => {
             if (uiMode.current === "slider") {
                 updateSlider(results, handDetected);
             } else {
+                drawGrabHint(window.innerWidth/2, 200);
                 updateCursor(results);
                 interactionState.main.hover = getActiveMainSegment();
                 updateHoverFill(now, 0);    // main manu

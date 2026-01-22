@@ -1,3 +1,4 @@
+import {ctx} from "./main.js";
 export let isPinched;
 export let isGrabbing = false;
 export let isOpenHand = false;
@@ -10,6 +11,18 @@ export let gestureThresholds = {
     pinchThreshold: 0.05,
     openPalmThreshold: 0.3,
     grabThreshold: 0.13
+}
+
+/**
+ * Load images for skip dwell time animation
+ * @type {number}
+ */
+let grabAnimFrame = 0;
+const grabFrames = [];
+for (let i = 0; i <= 1; i++) {
+    const img = new Image();
+    img.src = `./images/grab_hint/frame_${i}.png`;
+    grabFrames.push(img);
 }
 
 /**
@@ -108,4 +121,19 @@ function calculateAvgFingerDistance(results){
     }
 
     return sumDistance / fingerTips.length;
+}
+
+/** Method that draws hint for grab gesture to skip dwell time
+ *
+ * @param x
+ * @param y
+ */
+export function drawGrabHint(x, y) {
+    const frame = grabFrames[Math.floor(grabAnimFrame) % grabFrames.length];
+    if (!frame?.complete) return;
+
+    ctx.font = "64px sans-serif";
+    ctx.fillText("Skip dwell time", x-100, y-120);
+    ctx.drawImage(frame, x+150, y-180, 100, 100);
+    grabAnimFrame += 0.05; // speed
 }
