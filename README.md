@@ -1,7 +1,16 @@
 # gesture-interface-ma
 This repository is set up to create an interface used in the MIR (https://www.htw-dresden.de/hochschule/fakultaeten/info-math/labore-und-lehrplattformen/mir) to enable gesture interaction with marking menus.
 
+## Start application
+### Option a: Web
 This project is a static web application and can be run locally using any simple web server.
+It is also deployed using github pages: https://selinanatschke.github.io/gesture-interface-ma/
+
+### Option b: Electron
+You can run the electron application by typing these commands in the command line:
+```cd electron-app``` and then ```npm run start ```
+
+Press F11 to display the application full screen.
 
 ## Features
 ### 1. HandDetection:
