@@ -1,5 +1,6 @@
 {
-  "radius": 120,
+  "radius": 200,
+  "subRadius": 100,
   "items": [
     {
       "label": "H, V, L einstellen",

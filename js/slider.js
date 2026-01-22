@@ -12,6 +12,7 @@ import { dwellProgress } from "./timings.js";
 let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
+const SLIDER_GAP = 180;  // distance between menu and slider
 
 /** State that keeps track of slider visibility
  * - visible: is slider visible?
@@ -86,7 +87,7 @@ function drawVerticalSlider() {
 
     // title
     ctx.fillStyle = "black";
-    ctx.font = "24px sans-serif";
+    ctx.font = "32px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 30);
 
@@ -95,7 +96,7 @@ function drawVerticalSlider() {
 
     // hand-symbol
     if (handImg.complete) {
-        ctx.drawImage(handImg, sliderX + 70, sliderY + sliderHeight/2 - 120/2, 80, 120);
+        ctx.drawImage(handImg, sliderX + 70, sliderY + sliderHeight/2 - 120/2, 100, 180);
     }
 }
 
@@ -157,7 +158,7 @@ function drawHorizontalSlider(type) {
 
     // title
     ctx.fillStyle = "black";
-    ctx.font = "24px sans-serif";
+    ctx.font = "32px sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 20);
 
@@ -172,7 +173,7 @@ function drawHorizontalSlider(type) {
     // hand-symbol with adaptive spacing
     if (handImg.complete) {
         // ...(handImg, space left to image, space above image, width, height);
-        ctx.drawImage(handImg, sliderX + sliderWidth/2 - 60, sliderY + sliderHeight + 40, 120, 120);
+        ctx.drawImage(handImg, sliderX + sliderWidth/2 - 60, sliderY + sliderHeight + 40, 140, 140);
     }
 }
 
@@ -181,7 +182,7 @@ function renderPresentationSliderExtras(filledWidth){
     const videoLength = 12.5; // min TODO get real value (?)
     const currentLength = sliderValue * videoLength;
 
-    ctx.font = "20px sans-serif";
+    ctx.font = "32px sans-serif";
 
     // current time (on the left, moves with slider progress)
     ctx.textAlign = "left";
@@ -241,23 +242,23 @@ export function showSlider(type) {
     // calculate position relative to the menu
     switch (sliderConfig.position) {
         case "right":
-            sliderX = menu.x + menu["radius"] + 160;
+            sliderX = menu.x + menu["radius"] + SLIDER_GAP;
             sliderY = menu.y - sliderHeight / 2;
             break;
 
         case "left":
-            sliderX = menu.x - menu["radius"] - sliderWidth - 160;
+            sliderX = menu.x - menu["radius"] - sliderWidth - SLIDER_GAP;
             sliderY = menu.y - sliderHeight / 2;
             break;
 
         case "bottom":
             sliderX = menu.x - sliderWidth / 2;
-            sliderY = menu.y + menu["radius"] + 130;
+            sliderY = menu.y + menu["radius"] + SLIDER_GAP;
             break;
 
         case "top":
             sliderX = menu.x - sliderWidth / 2;
-            sliderY = menu.y - menu["radius"] - sliderHeight - 240;
+            sliderY = menu.y - menu["radius"] - sliderHeight - SLIDER_GAP;
             break;
     }
 }

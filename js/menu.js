@@ -136,7 +136,7 @@ export function drawMarkingMenu() {
     setMenuGlobalAlpha();
 
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 3;
 
     for (let i = 0; i < items.length; i++) {            // loop for each segment
         const startAngle = i * angleStep;
@@ -239,7 +239,7 @@ function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
     const labelY = y + Math.sin(midAngle) * radius * 0.6;
 
     const icon = getIconForLabel(menu.items[i].label);
-    const size = menu.items[i].label === "H, V, L einstellen" ?  110 : 32; // Icon size => exception: bigger icon size TODO: make this more efficient
+    const size = menu.items[i].label === "H, V, L einstellen" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
     if (icon) {
         ctx.drawImage(
             icon,
@@ -250,7 +250,7 @@ function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
         );
     } else {
         ctx.fillStyle = "black";                        // color of label
-        ctx.font = "24px sans-serif";
+        ctx.font = "32px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(menu.items[i].label, labelX, labelY);
@@ -458,7 +458,7 @@ function drawSubMenu() {
     const endAngle = startAngle + angleStep;
 
     const innerRadius = menu["radius"];
-    const outerRadius = menu["radius"] + 60;
+    const outerRadius = menu["radius"] + menu["subRadius"];
 
     const subAngleStep = (endAngle - startAngle) / subItems.length;
 
@@ -482,7 +482,7 @@ function drawSubMenu() {
         const r = (innerRadius + outerRadius) / 2;
 
         const icon = getIconForLabel(subItems[i].label);
-        const size = 24;
+        const size = 48;
 
         const ix = menu.x + Math.cos(mid) * r;
         const iy = menu.y + Math.sin(mid) * r;
