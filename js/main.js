@@ -108,8 +108,7 @@ resize();
 
 // instiate mediapipe hand
 const hands = new Hands({
-    locateFile: (file) =>
-        `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+    locateFile: (file) => `./lib/mediapipe/hands/${file}`,
 });
 
 hands.setOptions({
