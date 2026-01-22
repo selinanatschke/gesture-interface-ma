@@ -14,8 +14,11 @@ export let cursor = {
 /** Function that uses the palm center to map the cursor position to its position.
  *
  * @param results
+ * @param handDetected
  */
-export function updateCursor(results){
+export function updateCursor(results, handDetected){
+    if(!handDetected) return;
+
     const landmarks = results.multiHandLandmarks[0];
     const indexTip = landmarks[9];              // position of cursor steered by middle of hand
 
@@ -33,7 +36,7 @@ export function updateCursor(results){
 function drawCursor(x, y) {
     if (uiMode.current === "slider") return; // do not draw cursor if slider is active
 
-    ctx.fillStyle = "purple";
+    ctx.fillStyle = "blue";
     ctx.beginPath();
     ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();

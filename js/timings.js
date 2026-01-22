@@ -166,6 +166,12 @@ export function drawGestureIcon(handDetected) {
 
     ctx.save();
 
+    // white background
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.fill();
+
     // depends on hand detection
     ctx.globalAlpha = handDetected ? 1.0 : 0.5;
 

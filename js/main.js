@@ -149,7 +149,6 @@ hands.onResults((results) => {
                 updateSlider(results, handDetected);
             } else {
                 drawGrabHint(window.innerWidth/2, 200);
-                updateCursor(results);
                 interactionState.main.hover = getActiveMainSegment();
                 updateHoverFill(now, 0);    // main manu
                 updateHoverFill(now, 1);    // sub menu
@@ -164,6 +163,7 @@ hands.onResults((results) => {
     }
 
     updateSubMenuState(handDetected)
+    updateCursor(results, handDetected);
 });
 
 // start camera

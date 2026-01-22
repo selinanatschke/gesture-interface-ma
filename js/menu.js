@@ -17,6 +17,14 @@ export const UI_SCALE = {
     maxRadius: 500
 };
 
+const MENU_COLORS = {
+    base: "rgba(255, 255, 255, 0.75)",
+    hover: "rgba(255, 120, 255, 0.75)",
+    selected: "rgba(255, 0, 255, 0.75)",
+    dwell: "rgba(0, 0, 0, 0.25)",
+    stroke: "rgba(0, 0, 0)"
+};
+
 /** State that saves all information about the menu levels
  * currently: two levels: main, sub (can later be expanded with subsub, or 2)
  *
@@ -209,11 +217,11 @@ function isMainSegmentHighlighted(i) {
  */
 function drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHovered) {
     if (isSelected) {
-        ctx.fillStyle = "rgba(255, 0, 255, 0.5)";      // selected
+        ctx.fillStyle = MENU_COLORS.selected;      // selected
     } else if (isHovered) {
-        ctx.fillStyle = "rgba(255, 0, 255, 0.3)";       // hovered
+        ctx.fillStyle = MENU_COLORS.hover;       // hovered
     } else {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.05)";          // default
+        ctx.fillStyle = MENU_COLORS.base;    // default
     }
 
     ctx.beginPath();
@@ -290,7 +298,7 @@ function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
     const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.main.dwellProgress;
     ctx.arc(x, y, radius, startAngle, fillEndAngle);
     ctx.closePath();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
+    ctx.fillStyle = MENU_COLORS.dwell;
     ctx.fill();
 
     // back to state that we saved to stack
@@ -472,10 +480,28 @@ function drawSubMenu() {
             innerRadius,
             outerRadius,
             a0,
-            a1
+            a1,
+            i
         );
 
-        ctx.stroke();
+        // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
+        if (i === interactionState.sub.hover  && !interactionState.sub.dwellTriggered) {
+            // dwell fill (radial)
+            if (interactionState.sub.dwellProgress > 0) {
+                ctx.beginPath();
+                ctx.moveTo(menu.x, menu.y);
+
+                const fillEnd =
+                    a0 + (a1 - a0) * interactionState.sub.dwellProgress;
+
+                ctx.arc(menu.x, menu.y, outerRadius, a0, fillEnd);
+                ctx.arc(menu.x, menu.y, innerRadius, fillEnd, a0, true);
+                ctx.closePath();
+
+                ctx.fillStyle = MENU_COLORS.dwell;
+                ctx.fill();
+            }
+        }
 
         // label
         const mid = (a0 + a1) / 2;
@@ -493,31 +519,6 @@ function drawSubMenu() {
             ctx.fillStyle = "black";
             ctx.fillText(subItems[i].label, ix, iy);
         }
-
-        // highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
-        if (i === interactionState.sub.hover || i === interactionState.sub.selected){
-            ctx.fillStyle = i === interactionState.sub.selected ? "rgba(255, 0, 255, 0.5)" : "rgba(255, 0, 255, 0.3)";      // if selection confirmed => darker tone
-            ctx.fill();
-        }
-
-        // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
-        if (i === interactionState.sub.hover  && !interactionState.sub.dwellTriggered) {
-            // dwell fill (radial)
-            if (interactionState.sub.dwellProgress > 0) {
-                ctx.beginPath();
-                ctx.moveTo(menu.x, menu.y);
-
-                const fillEnd =
-                    a0 + (a1 - a0) * interactionState.sub.dwellProgress;
-
-                ctx.arc(menu.x, menu.y, outerRadius, a0, fillEnd);
-                ctx.arc(menu.x, menu.y, innerRadius, fillEnd, a0, true);
-                ctx.closePath();
-
-                ctx.fillStyle = "rgba(0, 0, 0, 0.25)";
-                ctx.fill();
-            }
-        }
     }
 }
 
@@ -530,11 +531,22 @@ function drawSubMenu() {
  * @param startAngle
  * @param endAngle
  */
-function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle) {
+function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle, i) {
     ctx.beginPath();
     ctx.arc(x, y, outerR, startAngle, endAngle);                    // outer arc
     ctx.arc(x, y, innerR, endAngle, startAngle, true);   // inner arc
     ctx.closePath();
+    ctx.stroke();
+
+    // fill color: highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
+    if (i === interactionState.sub.selected) {
+        ctx.fillStyle = MENU_COLORS.selected;      // selected
+    } else if (i === interactionState.sub.hover) {
+        ctx.fillStyle = MENU_COLORS.hover;       // hovered
+    } else {
+        ctx.fillStyle = MENU_COLORS.base;    // default
+    }
+    ctx.fill();
 }
 
 /** handles actions of menu selection
