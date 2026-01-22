@@ -17,6 +17,7 @@ import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
 import { gestureThresholds, updateGestures, drawGrabHint } from "./gestures.js";
+import "./websocket.js"; // starts websocket
 
 const video = document.getElementById("video");
 const canvas = document.getElementById("canvas");

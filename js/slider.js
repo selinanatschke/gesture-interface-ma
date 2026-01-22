@@ -8,15 +8,20 @@ import {
 } from "./menu.js";
 import { isPinched } from "./gestures.js";
 import { dwellProgress } from "./timings.js";
+import { sendMessage } from "./websocket.js";
 
 let sliderConfig = null;
 let sliderValue = 0.5;  // 0..1
 let sliderX, sliderY, sliderWidth, sliderHeight;
 const SLIDER_GAP = 180;  // distance between menu and slider
 
+// values to limit messages sent each frame (time based throttling)
+let lastSliderSendTime = 0;
+const SLIDER_SEND_INTERVAL = 33; // ms = 30Hz (max. ca. 30 messages per second)
+
 /** State that keeps track of slider visibility
  * - visible: is slider visible?
- * - pewview: is preview active?
+ * - preview: is preview active?
  * - previewOwner: item that opened the preview
  *
  * @type {{visible: boolean, preview: boolean, previewOwner: null, selectedSliderType: null}}
@@ -304,6 +309,18 @@ export function updateSliderValueFromHand(results) {
 
     // limit values
     sliderValue = Math.min(1, Math.max(0, sliderValue));
+
+    const now = performance.now();
+
+    if (now - lastSliderSendTime > SLIDER_SEND_INTERVAL) {
+        sendMessage({
+            type: "slider:update",
+            target: sliderConfig.type,
+            value: sliderValue
+        });
+
+        lastSliderSendTime = now;
+    }
 }
 
 /**
