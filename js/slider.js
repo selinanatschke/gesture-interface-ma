@@ -312,6 +312,7 @@ export function showSlider(type) {
             sliderY = menu.y - menu["radius"] - sliderHeight - SLIDER_GAP;
             break;
     }
+    syncSliderFromData(type);
 }
 
 /** Copies values from data.js in sliderValue
