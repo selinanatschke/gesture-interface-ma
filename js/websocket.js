@@ -1,4 +1,8 @@
-const socket = new WebSocket("ws://localhost:8080");    // TODO port that uses UE
+import {handleDataUpdate, handlePresentationData} from "./data.js";
+import {syncSliderFromData, uiMode} from "./slider.js";
+import {isPinched} from "./gestures.js";
+
+const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
 
 socket.onopen = () => {
     console.log("WebSocket connected");
@@ -34,9 +38,20 @@ export function sendMessage(message) {
  * @param msg
  */
 function handleIncomingMessage(msg) {
+    console.log("received message from UE: ", msg)
     switch (msg.type) {
         case "presentation:state":
-            // duration, currentTime, playing
+            if(!(uiMode.current === "slider" && isPinched)){    // engine updates are ignored as long as user modifies slider
+                handlePresentationData(msg);
+                syncSliderFromData("presentation")
+            }
+            break;
+        case "slider:update":
+            handleDataUpdate(msg);
+            syncSliderFromData(msg.target)
+            break;
+        case "presentation:command":
+            // TODO
             break;
     }
 }

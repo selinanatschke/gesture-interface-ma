@@ -9,9 +9,10 @@ import {
 import { isPinched } from "./gestures.js";
 import { dwellProgress } from "./timings.js";
 import { sendMessage } from "./websocket.js";
+import { videoLength, currentLength, volume, vibration, brightness } from "./data.js";
 
 let sliderConfig = null;
-let sliderValue = 0.5;  // 0..1
+let sliderValue;        // local slider value
 let sliderX, sliderY, sliderWidth, sliderHeight;
 const SLIDER_GAP = 180;  // distance between menu and slider
 
@@ -65,7 +66,7 @@ export function drawSliderCanvas() {
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
-        drawVerticalSlider();
+        drawVerticalSlider(sliderConfig.type);
     } else {
         drawHorizontalSlider(sliderConfig.type);
     }
@@ -75,13 +76,13 @@ export function drawSliderCanvas() {
 /**
  * Draws slider vertically
  */
-function drawVerticalSlider() {
+function drawVerticalSlider(type) {
     // background
     ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
     ctx.fillRect(sliderX, sliderY, sliderWidth, sliderHeight);
 
     // bar chart for slider
-    const filledHeight = sliderHeight * sliderValue;
+    const filledHeight = sliderHeight * getSliderValue();
     ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
     ctx.fillRect(
         sliderX,
@@ -96,8 +97,12 @@ function drawVerticalSlider() {
     ctx.textAlign = "center";
     ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 30);
 
-    // value
-    ctx.fillText(Math.round(sliderValue * 100) + "%", sliderX + sliderWidth/2, sliderY + sliderHeight + 30);
+    // if type is not presentation, use normal layout
+    if (type !== "presentation") {
+        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderWidth/2, sliderY + sliderHeight + 30);
+    } else {
+        renderPresentationSliderExtras(filledHeight, "vertical")
+    }
 
     // hand-symbol
     if (handImg.complete) {
@@ -152,7 +157,7 @@ function drawHorizontalSlider(type) {
     ctx.fillRect(sliderX, sliderY, sliderWidth, sliderHeight);
 
     // bar chart for slider
-    const filledWidth = sliderWidth * sliderValue;
+    const filledWidth = sliderWidth * getSliderValue();
     ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
     ctx.fillRect(
         sliderX,
@@ -169,10 +174,10 @@ function drawHorizontalSlider(type) {
 
     // if type is not presentation, use normal layout
     if (type !== "presentation") {
-        ctx.fillText(Math.round(sliderValue * 100) + "%", sliderX + sliderWidth / 2, sliderY + sliderHeight + 20
+        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderWidth / 2, sliderY + sliderHeight + 20
         );
     } else {
-        renderPresentationSliderExtras(filledWidth)
+        renderPresentationSliderExtras(filledWidth, "horizontal")
     }
 
     // hand-symbol with adaptive spacing
@@ -182,25 +187,66 @@ function drawHorizontalSlider(type) {
     }
 }
 
-function renderPresentationSliderExtras(filledWidth){
-    // if type is presentation, add video play button an minute counter
-    const videoLength = 12.5; // min TODO get real value (?)
-    const currentLength = sliderValue * videoLength;
-
+function renderPresentationSliderExtras(filledFormat, format){
+    // if type is presentation, add video play button and minute counter
     ctx.font = "32px sans-serif";
 
-    // current time (on the left, moves with slider progress)
-    ctx.textAlign = "left";
-    ctx.fillText(formatMinutes(currentLength), sliderX + filledWidth, sliderY + sliderHeight + 20
-    );
+    if (format === "horizontal") {
+    // current time (moves with slider)
+        ctx.textAlign = "left";
+        ctx.fillText(
+            formatMinutes(currentLength),
+            sliderX + filledFormat,
+            sliderY + sliderHeight + 20
+        );
 
-    // total video length (on the right, static)
-    ctx.textAlign = "right";
-    ctx.fillText(formatMinutes(videoLength), sliderX + sliderWidth, sliderY + sliderHeight + 20);
+        // total duration (static, right)
+        ctx.textAlign = "right";
+        ctx.fillText(
+            formatMinutes(videoLength),
+            sliderX + sliderWidth,
+            sliderY + sliderHeight + 20
+        );
 
-    // play icon (links vom Slider)
-    if (playIcon.complete) {
-        ctx.drawImage(playIcon, sliderX - 40, sliderY + sliderHeight / 2 - 16, 32, 32);
+        // play icon (left of slider)
+        if (playIcon.complete) {
+            ctx.drawImage(
+                playIcon,
+                sliderX - 40,
+                sliderY + sliderHeight / 2 - 16,
+                32,
+                32
+            );
+        }
+    } else if (format ==="vertical"){
+        // current time (moves vertically with progress)
+        const currentY = sliderY + sliderHeight - filledFormat;
+
+        ctx.textAlign = "right";
+        ctx.fillText(
+            formatMinutes(currentLength),
+            sliderX - 10,
+            currentY + 10
+        );
+
+        // total duration (bottom, centered)
+        ctx.textAlign = "center";
+        ctx.fillText(
+            formatMinutes(videoLength),
+            sliderX + sliderWidth / 2,
+            sliderY + sliderHeight + 30
+        );
+
+        // play icon (left, center of slider)
+        if (playIcon.complete) {
+            ctx.drawImage(
+                playIcon,
+                sliderX,
+                sliderY + sliderHeight + 60,
+                32,
+                32
+            );
+        }
     }
 }
 
@@ -264,6 +310,26 @@ export function showSlider(type) {
         case "top":
             sliderX = menu.x - sliderWidth / 2;
             sliderY = menu.y - menu["radius"] - sliderHeight - SLIDER_GAP;
+            break;
+    }
+}
+
+/** Copies values from data.js in sliderValue
+ * @param type
+ */
+export function syncSliderFromData(type) {
+    switch (type) {
+        case "volume":
+            sliderValue = volume;
+            break;
+        case "brightness":
+            sliderValue = brightness;
+            break;
+        case "vibration":
+            sliderValue = vibration;
+            break;
+        case "presentation":
+            sliderValue = currentLength/videoLength;
             break;
     }
 }
@@ -366,3 +432,31 @@ export function showSliderPreview(type, owner) {
     uiMode.current = "menu"
     sliderState.previewOwner = owner
 }
+
+/**
+ * Method that returns slider value for the correct slider type.
+ * @returns {*|number}
+ */
+function getSliderValue() {
+    if (!sliderConfig) return 0;
+
+    if(uiMode.current === "slider" && isPinched){
+        return sliderValue;
+    }
+
+    switch (sliderConfig.type) {
+        case "volume":
+            return volume;
+        case "brightness":
+            return brightness;
+        case "vibration":
+            return vibration;
+        case "presentation":
+            if (!videoLength || videoLength === 0) return 0;
+            return currentLength / videoLength;
+        default:
+            return 0;
+    }
+
+}
+
