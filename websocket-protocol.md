@@ -5,7 +5,7 @@
 - Values normalized to 0.0 – 1.0 unless stated otherwise
 
 ---
-### Slider Update (UI -> UE)
+### Slider Update
 
 Sent from UI to UE when a slider value changes.
 
@@ -17,7 +17,7 @@ Sent from UI to UE when a slider value changes.
 }
 ```
 
-### Presentation Command (UI -> UE)
+### Presentation Command
 Sent from UI to UE when the user interacts with UI components to pause/play video.
 ```json
 {
@@ -27,7 +27,7 @@ Sent from UI to UE when the user interacts with UI components to pause/play vide
 
 ```
 
-### Presentation State (UE -> UI)
+### Presentation State
 Sent from UE to Frontend when the connection starts -> important for presentation slider to show the correct values and not only dummy data.
 ```json
 {
@@ -37,3 +37,11 @@ Sent from UE to Frontend when the connection starts -> important for presentatio
   "playing": true
 }
 ```
+
+
+   <div style="display: flex; gap: 20px; margin: 20px 0;">
+       <div>
+           <img src="images/docs/communication_diagram.jpg" width="500"><br>
+           <sub>Diagram of how communication between User Interface (UI) and Dummy Server/Unreal Engine would work. Play/Pause is not visualized yet.</sub>
+       </div>
+   </div>
