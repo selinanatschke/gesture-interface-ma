@@ -22,6 +22,9 @@ let uiState = {
     vibration: 0.1
 };
 
+/**
+ * This is called when a websocket joined port 3000.
+ */
 wss.on("connection", (ws) => {
     console.log("UI connected");
 
