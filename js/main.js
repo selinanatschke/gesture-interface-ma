@@ -134,10 +134,10 @@ hands.onResults((results) => {
 
     // if no hand is detected, all selection/hovers are reset + reset previously selected slider
     if (!handDetected) {
-        interactionState.main.selected = null;
-        interactionState.main.hover = null;
-        interactionState.sub.hover = null;
-        interactionState.sub.selected = null;
+        interactionState.levels[0].selected = null;
+        interactionState.levels[0].hover = null;
+        interactionState.levels[1].hover = null;
+        interactionState.levels[1].selected = null;
         sliderState.selectedSliderType = null;
         hideSlider();
         uiMode.current = "menu";
@@ -151,7 +151,7 @@ hands.onResults((results) => {
                 updateSlider(results, handDetected);
             } else {
                 drawGrabHint(window.innerWidth/2, 200);
-                interactionState.main.hover = getActiveMainSegment();
+                interactionState.levels[0].hover = getActiveMainSegment();
                 updateHoverFill(now, 0);    // main manu
                 updateHoverFill(now, 1);    // sub menu
             }

@@ -136,11 +136,11 @@ export function handlePreview(level){
     if (sliderState.preview) {
 
         const stillHovered =
-            (sliderState.previewOwner?.level === 0 || sliderState.previewOwner.level === "main")
-                ? interactionState.main.hover === sliderState.previewOwner?.index
+            (sliderState.previewOwner?.level === 0)
+                ? interactionState.levels[0].hover === sliderState.previewOwner?.index
                 : (
-                    interactionState.sub.hover === sliderState.previewOwner?.sub &&
-                    interactionState.main.selected === sliderState.previewOwner?.main
+                    interactionState.levels[1].hover === sliderState.previewOwner?.sub &&
+                    interactionState.levels[0].selected === sliderState.previewOwner?.main
                 );
 
         if (!stillHovered) {
@@ -151,13 +151,13 @@ export function handlePreview(level){
     }
 
     // slider preview if hover but not confirmed yet
-    if (interactionState[level].dwellProgress > 0 && interactionState[level].dwellProgress < 1) {
-        const hoveredItem = (level === 0 || level === "main") ? getHoveredItem("main") : getHoveredItem("sub");
+    if (interactionState.levels[level].dwellProgress > 0 && interactionState.levels[level].dwellProgress < 1) {
+        const hoveredItem = (level === 0) ? getHoveredItem(0) : getHoveredItem(1);
 
         const owner =
-            (level === 0 || level === "main")
-                ? { level: 0, index: interactionState.main.hover }
-                : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
+            (level === 0)
+                ? { level: 0, index: interactionState.levels[0].hover }
+                : { level: 1, main: interactionState.levels[0].selected, sub: interactionState.levels[1].hover };
 
         if (hoveredItem?.type === "slider" && !sliderState.preview) {
             showSliderPreview(hoveredItem.target, owner);
