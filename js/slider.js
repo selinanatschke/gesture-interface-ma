@@ -53,6 +53,21 @@ const handImg = new Image();
 const playIcon = new Image();
 playIcon.src = "./images/play_icon.png";
 
+const SLIDER_META = {
+    volume: {
+        title: "Lautstärke"
+    },
+    brightness: {
+        title: "Helligkeit"
+    },
+    vibration: {
+        title: "Vibration"
+    },
+    presentation: {
+        title: "Wiedergabe vor-/zurückspulen"
+    }
+};
+
 export function openSelectedSlider(selectedSliderType){
     sliderState.selectedSliderType = selectedSliderType;
     sliderState.visible = true;
@@ -264,6 +279,12 @@ function formatMinutes(value) {
  * @param type
  */
 export function showSlider(type) {
+    const meta = SLIDER_META[type];
+    if (!meta) {
+        console.warn("Unknown slider type:", type);
+        return;
+    }
+
     sliderState.visible = true;
     sliderState.preview = false;
 
@@ -272,12 +293,7 @@ export function showSlider(type) {
     // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
         type: type,
-        title: {
-            volume: "Lautstärke",
-            brightness: "Helligkeit",
-            vibration: "Vibration",
-            presentation: "Wiedergabe vor-/zurückspulen"
-        }[type],
+        ...meta,
         orientation: placement.orientation,
         position: placement.position
     };
