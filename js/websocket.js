@@ -1,6 +1,5 @@
-import {currentLength, handleDataUpdate, handlePresentationData} from "./data.js";
-import {syncSliderFromData, uiMode} from "./slider.js";
-import {isPinched} from "./gestures.js";
+import {handleDataUpdate, handleInitialData} from "./data.js";
+import {syncSliderFromData} from "./slider.js";
 
 const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
 let offlineMode = false;    // if no server is there to connect, use dummmy data
@@ -48,28 +47,26 @@ export function sendMessage(message) {
 function handleOfflineMessage(msg) {
     console.log("Offline mode message:", msg);
 
-    switch (msg.type) {
-        case "slider:update":
-            if (msg.target === "presentation") {
-                const durationInSeconds = 750;
-                const seconds = msg.value * durationInSeconds / 60;
+    if (msg.action === "update" && msg.type === "slider") {
 
-                handleDataUpdate({
-                    target: "presentation",
-                    value: seconds
-                });
-            } else {
-                handleDataUpdate(msg);
-            }
-            syncSliderFromData(msg.target);
-            break;
+        if (msg.target === "presentation") {
+            const durationInSeconds = 750;
+            const seconds = msg.value * durationInSeconds / 60;
 
-        case "presentation:command":
-            // simple fake play/pause TODO needs testing
-            if (msg.action === "play") {
-                startDummyPlayback();
-            }
-            break;
+            handleDataUpdate({
+                target: "presentation",
+                value: seconds
+            });
+        } else {
+            handleDataUpdate(msg);
+        }
+        syncSliderFromData(msg.target);
+    } else if (msg.action === "pressed" && msg.type === "button" && msg.target === "presentation"){
+
+        // simple fake play/pause TODO needs testing
+        if (msg.action === "play") {
+            startDummyPlayback();
+        }
     }
 }
 
@@ -77,10 +74,7 @@ function handleOfflineMessage(msg) {
  * initializes dummy offline data
  */
 function initOfflineData() {
-    handlePresentationData({
-        duration: 750,
-        currentTime: 0
-    });
+    handleInitialData(750);
 
     handleDataUpdate({ target: "volume", value: 0.5 });
     handleDataUpdate({ target: "brightness", value: 0.7 });
@@ -94,10 +88,7 @@ function startDummyPlayback() {
     if (dummyInterval) return;
 
     dummyInterval = setInterval(() => {
-        handlePresentationData({
-            duration: 750,
-            currentTime: (currentLength * 60) + 0.033
-        });
+        handleInitialData(750);
     }, 33);
 }
 
@@ -106,21 +97,27 @@ function startDummyPlayback() {
  * @param msg
  */
 function handleIncomingMessage(msg) {
-    console.log("received message from UE: ", msg)
-    switch (msg.type) {
-        case "presentation:state":
-            if(!(uiMode.current === "slider" && isPinched)){    // engine updates are ignored as long as user modifies slider
-                handlePresentationData(msg);
-                syncSliderFromData("presentation")
-            }
-            break;
-        case "slider:update":
-            handleDataUpdate(msg);
-            syncSliderFromData(msg.target)
-            break;
-        case "presentation:command":
-            // TODO
-            break;
+    console.log("received message from UE: ", msg);
+
+    // inital message that sends total video length in seconds and sets currentTime to 0
+    if (msg.action === "initial" && msg.type === "slider" && msg.target === "presentation") {
+        handleInitialData(msg.value);
+        return;
+    }
+
+    // 
+    if (msg.action === "update" && msg.type === "slider") {
+        handleDataUpdate({
+            target: msg.target,
+            value: msg.value
+        });
+
+        syncSliderFromData(msg.target);
+    }
+
+    if (msg.action === "pressed" && msg.type === "button") {
+        // optional handling
     }
 }
+
 

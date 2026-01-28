@@ -5,39 +5,64 @@
 - Values normalized to 0.0 – 1.0 unless stated otherwise
 
 ---
-### Slider Update
+### Message Structure
 
-Sent from UI to UE when a slider value changes.
+#### General structure
+Sent from UI to UE (and back as confirmation) when a slider value changes or the user interacts with UI components to pause/play video.
 
 ```json
 {
-  "type": "slider:update",
+  "action": "update | pressed | initial",
+  "type": "slider | button",
   "target": "volume | brightness | vibration | presentation",
-  "value": 0.0 - 1.0
+  "value": "0.0 - 1.0 | play | pause | number in s"
 }
 ```
 
-### Presentation Command
-Sent from UI to UE when the user interacts with UI components to pause/play video.
+#### Examples
+Example for a slider update message: The user has changed the volume slider value to 35%.
 ```json
 {
-  "type": "presentation:command",
-  "action": "play | pause"
+  "action": "update",
+  "type": "slider",
+  "target": "volume",
+  "value": "0.35"
 }
-
 ```
 
-### Presentation State
-Sent from UE to Frontend when the connection starts -> important for presentation slider to show the correct values and not only dummy data.
+Example for a slider update message: The user has changed the current time of the video to 1:20min of a total length of 2:00min.
 ```json
 {
-  "type": "presentation:state",
-  "duration": 220,
-  "currentTime": 94,
-  "playing": true
+  "action": "update",
+  "type": "slider",
+  "target": "presentation",
+  "value": "80"
 }
 ```
 
+Example for the initial message that is sent from the application to the frontend to clarify how long the video is. 
+In this case ```value``` is stating the total length of the video (2:00min). 
+```json
+{
+  "action": "initial",
+  "type": "slider",
+  "target": "presentation",
+  "value": "120"
+}
+```
+
+Example for a message that was sent if the user hits pause/play. 
+Since the value now is play, it means that this should set the video in a running state.
+```json
+{
+  "action": "pressed",
+  "type": "button",
+  "target": "presentation",
+  "value": "play"
+}
+```
+
+### Communication Diagram
 
    <div style="display: flex; gap: 20px; margin: 20px 0;">
        <div>

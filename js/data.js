@@ -1,19 +1,21 @@
 /**
  * Slider value storage
  */
-export let videoLength;
-export let currentLength;
-export let volume;
-export let brightness;
-export let vibration;
+export const sliderValueStorage = {
+    videoLength: 0,
+    currentLength: 0,
+    volume: 0,
+    brightness: 0,
+    vibration: 0
+};
 
 /**
  * When UE sends presentation data, it is saved in videoLength and currentLength
- * @param msg
+ * @param totalVideoLength
  */
-export function handlePresentationData(msg){
-    videoLength = msg.duration / 60;
-    currentLength = msg.currentTime / 60;
+export function handleInitialData(totalVideoLength){
+    sliderValueStorage.videoLength = totalVideoLength / 60;
+    sliderValueStorage.currentLength = 0;
 }
 
 /**
@@ -23,16 +25,16 @@ export function handlePresentationData(msg){
 export function handleDataUpdate(msg){
     switch (msg.target){
         case "volume":
-            volume = msg.value;
+            sliderValueStorage.volume = msg.value;
             break;
         case "brightness":
-            brightness = msg.value;
+            sliderValueStorage.brightness = msg.value;
             break;
         case "vibration":
-            vibration = msg.value;
+            sliderValueStorage.vibration = msg.value;
             break;
         case "presentation":
-            currentLength = msg.value;
+            sliderValueStorage.currentLength = msg.value;
             break;
     }
 }

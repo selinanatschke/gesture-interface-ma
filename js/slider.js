@@ -9,7 +9,7 @@ import {
 import { isPinched } from "./gestures.js";
 import { dwellProgress } from "./timings.js";
 import { sendMessage } from "./websocket.js";
-import { videoLength, currentLength, volume, vibration, brightness } from "./data.js";
+import { sliderValueStorage } from "./data.js";
 
 let sliderConfig = null;
 let sliderValue;        // local slider value
@@ -195,7 +195,7 @@ function renderPresentationSliderExtras(filledFormat, format){
     // current time (moves with slider)
         ctx.textAlign = "left";
         ctx.fillText(
-            formatMinutes(currentLength),
+            formatMinutes(sliderValueStorage.currentLength),
             sliderX + filledFormat,
             sliderY + sliderHeight + 20
         );
@@ -203,7 +203,7 @@ function renderPresentationSliderExtras(filledFormat, format){
         // total duration (static, right)
         ctx.textAlign = "right";
         ctx.fillText(
-            formatMinutes(videoLength),
+            formatMinutes(sliderValueStorage.videoLength),
             sliderX + sliderWidth,
             sliderY + sliderHeight + 20
         );
@@ -224,7 +224,7 @@ function renderPresentationSliderExtras(filledFormat, format){
 
         ctx.textAlign = "right";
         ctx.fillText(
-            formatMinutes(currentLength),
+            formatMinutes(sliderValueStorage.currentLength),
             sliderX - 10,
             currentY + 10
         );
@@ -232,7 +232,7 @@ function renderPresentationSliderExtras(filledFormat, format){
         // total duration (bottom, centered)
         ctx.textAlign = "center";
         ctx.fillText(
-            formatMinutes(videoLength),
+            formatMinutes(sliderValueStorage.videoLength),
             sliderX + sliderWidth / 2,
             sliderY + sliderHeight + 30
         );
@@ -321,16 +321,16 @@ export function showSlider(type) {
 export function syncSliderFromData(type) {
     switch (type) {
         case "volume":
-            sliderValue = volume;
+            sliderValue = sliderValueStorage.volume;
             break;
         case "brightness":
-            sliderValue = brightness;
+            sliderValue = sliderValueStorage.brightness;
             break;
         case "vibration":
-            sliderValue = vibration;
+            sliderValue = sliderValueStorage.vibration;
             break;
         case "presentation":
-            sliderValue = currentLength/videoLength;
+            sliderValue = sliderValueStorage.currentLength/sliderValueStorage.videoLength;
             break;
     }
 }
@@ -381,7 +381,8 @@ export function updateSliderValueFromHand(results) {
 
     if (now - lastSliderSendTime > SLIDER_SEND_INTERVAL) {
         sendMessage({
-            type: "slider:update",
+            action: "update",
+            type: "slider",
             target: sliderConfig.type,
             value: sliderValue
         });
@@ -447,14 +448,14 @@ function getSliderValue() {
 
     switch (sliderConfig.type) {
         case "volume":
-            return volume;
+            return sliderValueStorage.volume;
         case "brightness":
-            return brightness;
+            return sliderValueStorage.brightness;
         case "vibration":
-            return vibration;
+            return sliderValueStorage.vibration;
         case "presentation":
-            if (!videoLength || videoLength === 0) return 0;
-            return currentLength / videoLength;
+            if (!sliderValueStorage.videoLength || sliderValueStorage.videoLength === 0) return 0;
+            return sliderValueStorage.currentLength / sliderValueStorage.videoLength;
         default:
             return 0;
     }

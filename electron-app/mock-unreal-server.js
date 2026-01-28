@@ -35,13 +35,12 @@ wss.on("connection", (ws) => {
         const msg = JSON.parse(data.toString());
         console.log("Received from UI:", msg);
 
-        switch (msg.type) {
-            case "slider:update":
-                handleSliderUpdate(msg, ws);
-                break;
-            case "presentation:command":
-                handlePresentationCommand(msg, ws);
-                break;
+        if (msg.action === "update" && msg.type === "slider") {
+            handleSliderUpdate(msg, ws);
+        }
+
+        if (msg.action === "pressed" && msg.type === "button") {
+            handlePresentationCommand(msg, ws);
         }
     });
 
@@ -51,21 +50,26 @@ wss.on("connection", (ws) => {
 
     // Initial state (like UE when connecting) => sends general information about current volume, ...
     ws.send(JSON.stringify({
-        type: "presentation:state",
-        ...videoState
+        action: "initial",
+        type: "slider",
+        target: "presentation",
+        value: videoState.duration
     }));
     ws.send(JSON.stringify({
-        type: "slider:update",
+        action: "update",
+        type: "slider",
         target: "volume",
         value: uiState.volume
     }));
     ws.send(JSON.stringify({
-        type: "slider:update",
+        action: "update",
+        type: "slider",
         target: "brightness",
         value: uiState.brightness
     }));
     ws.send(JSON.stringify({
-        type: "slider:update",
+        action: "update",
+        type: "slider",
         target: "vibration",
         value: uiState.vibration
     }));
@@ -82,8 +86,10 @@ wss.on("connection", (ws) => {
                 videoState.playing = false;
             }
             ws.send(JSON.stringify({
-                type: "presentation:state",
-                ...videoState
+                action: "update",
+                type: "slider",
+                target: "presentation",
+                value: videoState.currentTime
             }));
         }
     }, 33);
@@ -107,7 +113,8 @@ function handleSliderUpdate(msg, ws) {
     uiState[msg.target] = msg.value;
 
     ws.send(JSON.stringify({
-        type: "slider:update",
+        action: "update",
+        type: "slider",
         target: msg.target,
         value: returnValue
     }));
@@ -120,13 +127,13 @@ function handleSliderUpdate(msg, ws) {
  * TODO needs testing
  */
 function handlePresentationCommand(msg, ws) {
-    if (msg.action === "play") videoState.playing = true;
-    if (msg.action === "pause") videoState.playing = false;
-
-    // console.log("Command:", msg.action);
+    if (msg.value === "play") videoState.playing = true;
+    if (msg.value === "pause") videoState.playing = false;
 
     ws.send(JSON.stringify({
-        type: "presentation:state",
-        ...videoState
+        action: "update",
+        type: "slider",
+        target: "presentation",
+        value: videoState.currentTime
     }));
 }
