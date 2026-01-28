@@ -4,53 +4,43 @@
   "items": [
     {
       "label": "H, V, L einstellen",
-      "subItems": [
+      "type": "menu",
+      "children": [
         {
           "label": "Lautstärke",
-          "action": {
-            "name": "open_slider",
-            "type": "volume"
-          }
+          "type": "slider",
+          "target": "volume"
         },
         {
           "label": "Helligkeit",
-          "action": {
-            "name": "open_slider",
-            "type": "brightness"
-          }
+          "type": "slider",
+          "target": "brightness"
         },
         {
           "label": "Vibration",
-          "action": {
-            "name": "open_slider",
-            "type": "vibration"
-          }
+          "type": "slider",
+          "target": "vibration"
         }
       ]
     },
     {
       "label": "Präsentationssteuerung",
-      "action": {
-        "name": "open_slider",
-        "type": "presentation"
-      }
+      "type": "slider",
+      "target": "presentation"
     },
     {
       "label": "C",
-      "subItems": [
+      "type": "menu",
+      "children": [
         {
           "label": "C1",
-          "action": {
-            "name": "print",
-            "type": "text"
-          }
+          "type": "placeholder",
+          "target": "text"
         },
         {
           "label": "C2",
-          "action": {
-            "name": "print",
-            "type": "number"
-          }
+          "type": "placeholder",
+          "target": "number"
         }
       ]
     }

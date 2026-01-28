@@ -3,8 +3,8 @@ import {
     getHoveredItem,
     getSliderPlacementForMainItem,
     interactionState,
-    itemHasSlider,
-    menu
+    menu,
+    menuState
 } from "./menu.js";
 import { isPinched } from "./gestures.js";
 import { dwellProgress } from "./timings.js";
@@ -55,6 +55,9 @@ playIcon.src = "./images/play_icon.png";
 
 export function openSelectedSlider(selectedSliderType){
     sliderState.selectedSliderType = selectedSliderType;
+    sliderState.visible = true;
+    sliderState.preview = false;
+    uiMode.current = "slider";
 }
 /**
  * Determines whether the slider has to be drawn horizontally or vertically depending on its type
@@ -141,8 +144,8 @@ export function handlePreview(level){
                 ? { level: 0, index: interactionState.main.hover }
                 : { level: 1, main: interactionState.main.selected, sub: interactionState.sub.hover };
 
-        if (itemHasSlider(hoveredItem) && !sliderState.preview) {
-            showSliderPreview(hoveredItem.action.type, owner);
+        if (hoveredItem?.type === "slider" && !sliderState.preview) {
+            showSliderPreview(hoveredItem.target, owner);
 
         }
     }
@@ -293,23 +296,23 @@ export function showSlider(type) {
     // calculate position relative to the menu
     switch (sliderConfig.position) {
         case "right":
-            sliderX = menu.x + menu["radius"] + SLIDER_GAP;
-            sliderY = menu.y - sliderHeight / 2;
+            sliderX = menuState.x + menu["radius"] + SLIDER_GAP;
+            sliderY = menuState.y - sliderHeight / 2;
             break;
 
         case "left":
-            sliderX = menu.x - menu["radius"] - sliderWidth - SLIDER_GAP;
-            sliderY = menu.y - sliderHeight / 2;
+            sliderX = menuState.x - menu["radius"] - sliderWidth - SLIDER_GAP;
+            sliderY = menuState.y - sliderHeight / 2;
             break;
 
         case "bottom":
-            sliderX = menu.x - sliderWidth / 2;
-            sliderY = menu.y + menu["radius"] + SLIDER_GAP;
+            sliderX = menuState.x - sliderWidth / 2;
+            sliderY = menuState.y + menu["radius"] + SLIDER_GAP;
             break;
 
         case "top":
-            sliderX = menu.x - sliderWidth / 2;
-            sliderY = menu.y - menu["radius"] - sliderHeight - SLIDER_GAP;
+            sliderX = menuState.x - sliderWidth / 2;
+            sliderY = menuState.y - menu["radius"] - sliderHeight - SLIDER_GAP;
             break;
     }
     syncSliderFromData(type);
@@ -416,7 +419,7 @@ export function updateSlider(results, handDetected) {
     }
 
     // if an item with a slider action was already opened and no other slider preview is shown currently, draw slider
-    if(sliderState.selectedSliderType && !sliderState.preview){
+    if(sliderState.selectedSliderType && !sliderState.preview && !sliderState.visible){
         showSlider(sliderState.selectedSliderType);    // enables slider
     }
 }
@@ -454,8 +457,11 @@ function getSliderValue() {
         case "vibration":
             return sliderValueStorage.vibration;
         case "presentation":
-            if (!sliderValueStorage.videoLength || sliderValueStorage.videoLength === 0) return 0;
-            return sliderValueStorage.currentLength / sliderValueStorage.videoLength;
+            if (!sliderValueStorage.videoLength) {
+                return 0;
+            } else {
+                return sliderValueStorage.currentLength / sliderValueStorage.videoLength;
+            }
         default:
             return 0;
     }

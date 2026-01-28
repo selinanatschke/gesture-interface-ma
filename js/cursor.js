@@ -1,6 +1,6 @@
 import { ctx } from "./main.js";
 import { uiMode } from "./slider.js";
-import { menu } from "./menu.js"
+import {menuState} from "./menu.js"
 
 /** cursor element that holds the position of the cursor
  *
@@ -48,8 +48,8 @@ function drawCursor(x, y) {
  * @returns {number}
  */
 export function getCursorDistance() {
-    const dx = cursor.x - menu.x;
-    const dy = cursor.y - menu.y;
+    const dx = cursor.x - menuState.x;
+    const dy = cursor.y - menuState.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
@@ -58,8 +58,8 @@ export function getCursorDistance() {
  * @returns {number}
  */
 export function getCursorAngle() {
-    const dx = cursor.x - menu.x;
-    const dy = cursor.y - menu.y;
+    const dx = cursor.x - menuState.x;
+    const dy = cursor.y - menuState.y;
 
     let angle = Math.atan2(dy, dx); // -PI .. PI
 

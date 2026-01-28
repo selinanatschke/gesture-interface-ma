@@ -7,6 +7,11 @@ import { isGrabbing } from "./gestures.js";
 const response = await fetch("./menu.json");
 export const menu = await response.json();
 
+export const menuState = {
+    x: 0,
+    y: 0
+};
+
 /**
  *  Scale steps for administrating the size of the application
  * @type {{radiusStep: number, minRadius: number, maxRadius: number}}
@@ -138,7 +143,7 @@ export function updateSubMenuState(handDetected){
  *  draws marking menu (only first level)
  */
 export function drawMarkingMenu() {
-    const { x, y, radius, items } = menu;
+    const { radius, items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
 
     setMenuGlobalAlpha();
@@ -153,9 +158,9 @@ export function drawMarkingMenu() {
         const isHighlighted = isMainSegmentHighlighted(i);
         const isSelected = i === interactionState.main.selected;
 
-        drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHighlighted);
-        drawMainLabel(i, x, y, radius, startAngle, endAngle);
-        drawHoverFill(i, x, y, radius, startAngle, endAngle);
+        drawSegment(startAngle, endAngle, isSelected, isHighlighted);
+        drawMainLabel(i, startAngle, endAngle);
+        drawHoverFill(i, startAngle, endAngle);
     }
 
     // draw submenu if cursor is hovering over selected main segment OR slider is visible OR cursor is in submenu ring
@@ -193,7 +198,8 @@ function isMainSegmentHighlighted(i) {
     const selectedMainSegment = interactionState.main.selected;
 
     // if main segment is selected, check if it has subItems
-    const hasSubItems = stateItemIsSet(selectedMainSegment) ? itemHasSubItems(menu.items[selectedMainSegment]) : false;
+    const selectedItem = menu.items[selectedMainSegment];
+    const hasSubItems = selectedItem?.type === "menu";
 
     // check if cursor is in submenuRing
     const cursorInSubMenu =
@@ -207,15 +213,12 @@ function isMainSegmentHighlighted(i) {
 
 /**
  *  helper function to draw a circle segment for the main menu level
- * @param x
- * @param y
- * @param radius
  * @param startAngle
  * @param endAngle
  * @param isSelected
  * @param isHovered
  */
-function drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHovered) {
+function drawSegment(startAngle, endAngle, isSelected, isHovered) {
     if (isSelected) {
         ctx.fillStyle = MENU_COLORS.selected;      // selected
     } else if (isHovered) {
@@ -225,8 +228,8 @@ function drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHovered) 
     }
 
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.moveTo(menuState.x, menuState.y);
+    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, endAngle);
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -235,16 +238,13 @@ function drawSegment(x, y, radius, startAngle, endAngle, isSelected, isHovered) 
 /** Helper function to draw the label in a segment for the main menu
  *
  * @param i
- * @param x
- * @param y
- * @param radius
  * @param startAngle
  * @param endAngle
  */
-function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
+function drawMainLabel(i, startAngle, endAngle) {
     const midAngle = (startAngle + endAngle) / 2;
-    const labelX = x + Math.cos(midAngle) * radius * 0.6;
-    const labelY = y + Math.sin(midAngle) * radius * 0.6;
+    const labelX = menuState.x + Math.cos(midAngle) * menu.radius * 0.6;
+    const labelY = menuState.y + Math.sin(midAngle) * menu.radius * 0.6;
 
     const icon = getIconForLabel(menu.items[i].label);
     const size = menu.items[i].label === "H, V, L einstellen" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
@@ -272,13 +272,11 @@ function drawMainLabel(i, x, y, radius, startAngle, endAngle) {
  * - restores snapshot without hover animation
  *
  * @param i
- * @param x
- * @param y
- * @param radius
+
  * @param startAngle
  * @param endAngle
  */
-function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
+function drawHoverFill(i, startAngle, endAngle) {
     const activeMainSegment = interactionState.main.hover;
 
     // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
@@ -287,16 +285,16 @@ function drawHoverFill(i, x, y, radius, startAngle, endAngle) {
     // create segment-path new and set as a clip
     ctx.save();             // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.moveTo(menuState.x, menuState.y);
+    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, endAngle);
     ctx.closePath();
     ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
 
     // draw dwell fill only for hovered segment (angle based)
     ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.moveTo(menuState.x, menuState.y);
     const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.main.dwellProgress;
-    ctx.arc(x, y, radius, startAngle, fillEndAngle);
+    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, fillEndAngle);
     ctx.closePath();
     ctx.fillStyle = MENU_COLORS.dwell;
     ctx.fill();
@@ -372,12 +370,23 @@ function updateDwell(needsReset, level, now){
  * @param selectedItem
  */
 function doActionOrHandleNavigation(selectedItem){
-    if (!itemHasSubItems(selectedItem) && selectedItem.action) {
-        handleMenuAction(selectedItem.action);
-    } else{
-        // items that open different sub menu
+    if (!selectedItem) return;
+
+    // if element opens submenu
+    if (selectedItem.type === "menu") {
         hideSlider();
+        return;
     }
+
+    // if element opens slider
+    if (selectedItem.type === "slider") {
+        uiMode.current = "slider";
+        openSelectedSlider(selectedItem.target);
+        return;
+    }
+
+    // hide slider for all actions except slider
+    hideSlider();
 }
 
 /** Determines if cursor is in submenu ring (not main menu) using the radius and the cursor distance
@@ -400,13 +409,13 @@ function getActiveSubSegment() {
     const mainIndex = interactionState.main.selected;
     if (stateItemIsNotSet(mainIndex)) return -1;
 
-    const distance = getCursorDistance(menu, cursor);
+    const distance = getCursorDistance();
     const inner = menu["radius"];
     const outer = menu["radius"] + 80;
 
     if (distance < inner || distance > outer) return -1;
 
-    const angle = getCursorAngle(menu, cursor);
+    const angle = getCursorAngle();
 
     const angleStep = (Math.PI * 2) / menu.items.length;
     const startAngle = mainIndex * angleStep;
@@ -414,7 +423,7 @@ function getActiveSubSegment() {
 
     if (angle < startAngle || angle > endAngle) return -1;
 
-    const subItems = menu.items[mainIndex].subItems;
+    const subItems = menu.items[mainIndex].children;
     if (!subItems) return;      // if element does not have children, return
     const subStep = (endAngle - startAngle) / subItems.length;
 
@@ -443,7 +452,7 @@ export function getHoveredItem(level){
             stateItemIsSet(main) &&
             stateItemIsSet(sub)
         ) {
-            return menu.items[main].subItems[sub];
+            return menu.items[main].children[sub];
         }
     }
 }
@@ -457,7 +466,7 @@ export function getHoveredItem(level){
 function drawSubMenu() {
     const itemIndex = interactionState.main.selected;
 
-    const subItems = menu.items[itemIndex].subItems;
+    const subItems = menu.items[itemIndex].children;
     if (!subItems) return;
 
     const angleStep = (Math.PI * 2) / menu.items.length;
@@ -475,8 +484,6 @@ function drawSubMenu() {
         const a1 = a0 + subAngleStep;
 
         drawRingSegment(
-            menu.x,
-            menu.y,
             innerRadius,
             outerRadius,
             a0,
@@ -489,13 +496,13 @@ function drawSubMenu() {
             // dwell fill (radial)
             if (interactionState.sub.dwellProgress > 0) {
                 ctx.beginPath();
-                ctx.moveTo(menu.x, menu.y);
+                ctx.moveTo(menuState.x, menuState.y);
 
                 const fillEnd =
                     a0 + (a1 - a0) * interactionState.sub.dwellProgress;
 
-                ctx.arc(menu.x, menu.y, outerRadius, a0, fillEnd);
-                ctx.arc(menu.x, menu.y, innerRadius, fillEnd, a0, true);
+                ctx.arc(menuState.x, menuState.y, outerRadius, a0, fillEnd);
+                ctx.arc(menuState.x, menuState.y, innerRadius, fillEnd, a0, true);
                 ctx.closePath();
 
                 ctx.fillStyle = MENU_COLORS.dwell;
@@ -510,8 +517,8 @@ function drawSubMenu() {
         const icon = getIconForLabel(subItems[i].label);
         const size = 48;
 
-        const ix = menu.x + Math.cos(mid) * r;
-        const iy = menu.y + Math.sin(mid) * r;
+        const ix = menuState.x + Math.cos(mid) * r;
+        const iy = menuState.y + Math.sin(mid) * r;
 
         if (icon) {
             ctx.drawImage(icon, ix - size / 2, iy - size / 2, size, size);
@@ -531,10 +538,10 @@ function drawSubMenu() {
  * @param startAngle
  * @param endAngle
  */
-function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle, i) {
+function drawRingSegment(innerR, outerR, startAngle, endAngle, i) {
     ctx.beginPath();
-    ctx.arc(x, y, outerR, startAngle, endAngle);                    // outer arc
-    ctx.arc(x, y, innerR, endAngle, startAngle, true);   // inner arc
+    ctx.arc(menuState.x, menuState.y, outerR, startAngle, endAngle);                    // outer arc
+    ctx.arc(menuState.x, menuState.y, innerR, endAngle, startAngle, true);   // inner arc
     ctx.closePath();
     ctx.stroke();
 
@@ -547,25 +554,6 @@ function drawRingSegment(x, y, innerR, outerR, startAngle, endAngle, i) {
         ctx.fillStyle = MENU_COLORS.base;    // default
     }
     ctx.fill();
-}
-
-/** handles actions of menu selection
- *
- * @param action
- */
-function handleMenuAction(action) {
-    switch (action.name) {
-        case "open_slider":
-            sliderState.preview = false;
-            uiMode.current = "slider";
-            openSelectedSlider(action.type);
-            break;
-
-        default:
-            // hide slider for all actions except open_slider
-            hideSlider()
-            console.warn("Unknown action type", action);
-    }
 }
 
 /** Checks if the state item is set
@@ -584,25 +572,6 @@ export function stateItemIsSet(stateItem){
  */
 function stateItemIsNotSet(stateItem){
     return stateItem === undefined || stateItem < 0 || stateItem === null
-}
-
-/** Checks if the item has a slider as their action.
- *
- * @param item
- * @returns {boolean}
- */
-export function itemHasSlider(item) {
-    return item?.action?.name === "open_slider";
-}
-
-/** Checks if the item has subItems
- *
- * @param item
- * @returns {boolean}
- */
-export function itemHasSubItems(item){
-    if (!item) return
-    return Object.hasOwn(item, 'subItems')
 }
 
 /**
@@ -651,7 +620,7 @@ function getIconForLabel(label) {
 export function getSliderPlacementForMainItem(type) {
     // get main item that opened slider type
     const mainItem = menu.items.find(item => {
-        if(itemHasSlider(item)) return item.action.type === type
+        if(item?.type === "slider") return item.target === type
     });
     const mainItemIndexThatOpenedSlider = mainItem ? menu.items.indexOf(mainItem) : interactionState.main.selected;
 

@@ -11,7 +11,8 @@ import {
     updateHoverFill,
     getActiveMainSegment,
     interactionState,
-    UI_SCALE
+    UI_SCALE,
+    menuState
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
@@ -43,16 +44,16 @@ window.addEventListener("keydown", (e) => {
 
         // move menu with arrow keys
         case "ArrowLeft":
-            menu.x -= MOVE_STEP;
+            menuState.x -= MOVE_STEP;
             break;
         case "ArrowRight":
-            menu.x += MOVE_STEP;
+            menuState.x += MOVE_STEP;
             break;
         case "ArrowUp":
-            menu.y -= MOVE_STEP;
+            menuState.y -= MOVE_STEP;
             break;
         case "ArrowDown":
-            menu.y += MOVE_STEP;
+            menuState.y += MOVE_STEP;
             break;
 
         // increase/decrease gesture thresholds
@@ -101,8 +102,8 @@ function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    menu.x = canvas.width / 2;
-    menu.y = canvas.height / 2;
+    menuState.x = canvas.width / 2;
+    menuState.y = canvas.height / 2;
 }
 window.addEventListener("resize", resize);
 resize();
