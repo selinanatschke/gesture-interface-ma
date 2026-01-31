@@ -138,7 +138,7 @@ export function updateSubMenuState(handDetected){
  *  draws marking menu (only first level)
  */
 export function drawMarkingMenu() {
-    const { radius, items } = menu;
+    const { items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
 
     setMenuGlobalAlpha();
@@ -153,16 +153,19 @@ export function drawMarkingMenu() {
         const isHighlighted = isMainSegmentHighlighted(i);
         const isSelected = i === interactionState.levels[0].selected;
 
-        drawSegment(startAngle, endAngle, isSelected, isHighlighted);
-        drawMainLabel(i, startAngle, endAngle);
-        drawHoverFill(i, startAngle, endAngle);
+        drawRingSegment(startAngle, endAngle, 0, menu.radius, isSelected, isHighlighted);
+        drawLabel(menu.items[i].label, startAngle, endAngle, menu.radius*0.6);
+
+        // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
+        const breakHoverCondition = interactionState.levels[0].dwellProgress === 0 || i !== interactionState.levels[0].hover || i === interactionState.levels[0].selected;
+        drawHoverFill(breakHoverCondition, startAngle, endAngle, 0, menu.radius, 0);
     }
 
     // draw submenu if cursor is hovering over selected main segment OR slider is visible OR cursor is in submenu ring
     if(interactionState.levels[0].selected === interactionState.levels[0].hover || sliderState.selectedSliderType !== null || isCursorInSubMenuRing()){
         // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
         if (stateItemIsSet(interactionState.levels[0].selected)) {
-            drawSubMenu();
+            drawSubMenu(1);
         }
     }
 
@@ -206,43 +209,20 @@ function isMainSegmentHighlighted(i) {
     );
 }
 
-/**
- *  helper function to draw a circle segment for the main menu level
- * @param startAngle
- * @param endAngle
- * @param isSelected
- * @param isHovered
- */
-function drawSegment(startAngle, endAngle, isSelected, isHovered) {
-    if (isSelected) {
-        ctx.fillStyle = MENU_COLORS.selected;      // selected
-    } else if (isHovered) {
-        ctx.fillStyle = MENU_COLORS.hover;       // hovered
-    } else {
-        ctx.fillStyle = MENU_COLORS.base;    // default
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(menuState.x, menuState.y);
-    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, endAngle);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-}
-
 /** Helper function to draw the label in a segment for the main menu
  *
- * @param i
+ * @param label
  * @param startAngle
  * @param endAngle
+ * @param radius
  */
-function drawMainLabel(i, startAngle, endAngle) {
+function drawLabel(label, startAngle, endAngle, radius) {
     const midAngle = (startAngle + endAngle) / 2;
-    const labelX = menuState.x + Math.cos(midAngle) * menu.radius * 0.6;
-    const labelY = menuState.y + Math.sin(midAngle) * menu.radius * 0.6;
+    let labelX = menuState.x + Math.cos(midAngle) * radius;
+    let labelY = menuState.y + Math.sin(midAngle) * radius;
 
-    const icon = getIconForLabel(menu.items[i].label);
-    const size = menu.items[i].label === "H, V, L einstellen" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
+    const icon = getIconForLabel(label);
+    const size = label === "H, V, L einstellen" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
     if (icon) {
         ctx.drawImage(
             icon,
@@ -256,7 +236,7 @@ function drawMainLabel(i, startAngle, endAngle) {
         ctx.font = "32px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(menu.items[i].label, labelX, labelY);
+        ctx.fillText(label, labelX, labelY);
     }
 }
 
@@ -266,36 +246,25 @@ function drawMainLabel(i, startAngle, endAngle) {
  * - adds filling frame by frame
  * - restores snapshot without hover animation
  *
- * @param i
-
+ * @param condition
  * @param startAngle
  * @param endAngle
+ * @param innerRadius
+ * @param outerRadius
+ * @param level
  */
-function drawHoverFill(i, startAngle, endAngle) {
-    const activeMainSegment = interactionState.levels[0].hover;
-
-    // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
-    if (interactionState.levels[0].dwellProgress === 0 || i !== activeMainSegment || i === interactionState.levels[0].selected) return;
-
-    // create segment-path new and set as a clip
-    ctx.save();             // this saves a snapshot of current canvas state to stack (fillStyle, strokeStyle, ..) -> used for temporary changes
-    ctx.beginPath();
-    ctx.moveTo(menuState.x, menuState.y);
-    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, endAngle);
-    ctx.closePath();
-    ctx.clip();      // changes after this only affect the clip that we just created -> rectangle is only in segment visible for the animation
+function drawHoverFill(condition, startAngle, endAngle, innerRadius, outerRadius, level) {
+    if (condition) return;
 
     // draw dwell fill only for hovered segment (angle based)
     ctx.beginPath();
     ctx.moveTo(menuState.x, menuState.y);
-    const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.levels[0].dwellProgress;
-    ctx.arc(menuState.x, menuState.y, menu.radius, startAngle, fillEndAngle);
+    const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.levels[level].dwellProgress;
+    ctx.arc(menuState.x, menuState.y, outerRadius, startAngle, fillEndAngle);
+    ctx.arc(menuState.x, menuState.y, innerRadius, fillEndAngle, startAngle, true);
     ctx.closePath();
     ctx.fillStyle = MENU_COLORS.dwell;
     ctx.fill();
-
-    // back to state that we saved to stack
-    ctx.restore();
 }
 
 /** helper function to calculate which segment is hovered on based on the angle
@@ -430,26 +399,29 @@ function getActiveSubSegment() {
 
 /**
  * helper function to return the item that is hovered (so that action/subitems can be used)
+ * it loops through the levels to find the correct child elements if necessary
  * @param level
  * @returns {*}
  */
-export function getHoveredItem(level){
-    // main item
-    if(level === 0){
-        return menu.items[interactionState.levels[0].hover]
+export function getHoveredItem(level) {
+    let currentItems = menu.items;
 
-    // sub item
-    } else if (level === 1) {
-        const main = interactionState.levels[0].selected;
-        const sub  = interactionState.levels[1].hover;
+    // navigate through parent levels via "selected" property and update currentItems to save the current level of items
+    for (let i = 0; i < level; i++) {
+        const parentSelected = interactionState.levels[i]?.selected;
+        if (!stateItemIsSet(parentSelected)) return;    // no parent item -> we are probably hovering in this level
 
-        if (
-            stateItemIsSet(main) &&
-            stateItemIsSet(sub)
-        ) {
-            return menu.items[main].children[sub];
-        }
+        const parentItem = currentItems[parentSelected];
+        if (!parentItem?.children) return;
+
+        currentItems = parentItem.children;
     }
+
+    // in the aimed level, we select the hovered one
+    const hoveredIndex = interactionState.levels[level]?.hover;
+    if (!stateItemIsSet(hoveredIndex)) return;
+
+    return currentItems[hoveredIndex];
 }
 
 /** Draws the submenu only for the selected main menu item
@@ -458,15 +430,16 @@ export function getHoveredItem(level){
  * - draws dwell animation
  *
  */
-function drawSubMenu() {
-    const itemIndex = interactionState.levels[0].selected;
+function drawSubMenu(level) {
+    const parentIndex = interactionState.levels[level - 1].selected;
 
-    const subItems = menu.items[itemIndex].children;
+
+    const subItems = menu.items[parentIndex].children;
     if (!subItems) return;
 
     const angleStep = (Math.PI * 2) / menu.items.length;
 
-    const startAngle = itemIndex * angleStep;
+    const startAngle = parentIndex * angleStep;
     const endAngle = startAngle + angleStep;
 
     const innerRadius = menu["radius"];
@@ -478,72 +451,38 @@ function drawSubMenu() {
         const a0 = startAngle + i * subAngleStep;
         const a1 = a0 + subAngleStep;
 
-        drawRingSegment(
-            innerRadius,
-            outerRadius,
-            a0,
-            a1,
-            i
-        );
+        const isSelected = i === interactionState.levels[1].selected
+        const isHighlighted = i === interactionState.levels[1].hover;
+        drawRingSegment(a0, a1, innerRadius, outerRadius, isSelected, isHighlighted);
+        drawLabel(subItems[i].label, a0, a1, (innerRadius + outerRadius) / 2)
 
         // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
-        if (i === interactionState.levels[1].hover  && !interactionState.levels[1].dwellTriggered) {
-            // dwell fill (radial)
-            if (interactionState.levels[1].dwellProgress > 0) {
-                ctx.beginPath();
-                ctx.moveTo(menuState.x, menuState.y);
-
-                const fillEnd =
-                    a0 + (a1 - a0) * interactionState.levels[1].dwellProgress;
-
-                ctx.arc(menuState.x, menuState.y, outerRadius, a0, fillEnd);
-                ctx.arc(menuState.x, menuState.y, innerRadius, fillEnd, a0, true);
-                ctx.closePath();
-
-                ctx.fillStyle = MENU_COLORS.dwell;
-                ctx.fill();
-            }
-        }
-
-        // label
-        const mid = (a0 + a1) / 2;
-        const r = (innerRadius + outerRadius) / 2;
-
-        const icon = getIconForLabel(subItems[i].label);
-        const size = 48;
-
-        const ix = menuState.x + Math.cos(mid) * r;
-        const iy = menuState.y + Math.sin(mid) * r;
-
-        if (icon) {
-            ctx.drawImage(icon, ix - size / 2, iy - size / 2, size, size);
-        } else {
-            ctx.fillStyle = "black";
-            ctx.fillText(subItems[i].label, ix, iy);
-        }
+        const breakHoverCondition = !(i === interactionState.levels[1].hover  && !interactionState.levels[1].dwellTriggered && interactionState.levels[1].dwellProgress > 0)
+        drawHoverFill(breakHoverCondition, a0, a1, innerRadius, outerRadius, 1)
     }
 }
 
 /** Helper function to draw border and fill color for submenu segments
  *
- * @param x
- * @param y
- * @param innerR
- * @param outerR
+
  * @param startAngle
  * @param endAngle
+ * @param innerRadius
+ * @param outerRadius
+ * @param isSelected
+ * @param isHighlighted
  */
-function drawRingSegment(innerR, outerR, startAngle, endAngle, i) {
+function drawRingSegment(startAngle, endAngle, innerRadius, outerRadius, isSelected, isHighlighted) {
     ctx.beginPath();
-    ctx.arc(menuState.x, menuState.y, outerR, startAngle, endAngle);                    // outer arc
-    ctx.arc(menuState.x, menuState.y, innerR, endAngle, startAngle, true);   // inner arc
+    ctx.arc(menuState.x, menuState.y, outerRadius, startAngle, endAngle);                    // outer arc
+    ctx.arc(menuState.x, menuState.y, innerRadius, endAngle, startAngle, true);   // inner arc
     ctx.closePath();
     ctx.stroke();
 
     // fill color: highlight sub-segment if it is hovered OR if slider is open and active (not faded + user interacts)
-    if (i === interactionState.levels[1].selected) {
+    if (isSelected) {
         ctx.fillStyle = MENU_COLORS.selected;      // selected
-    } else if (i === interactionState.levels[1].hover) {
+    } else if (isHighlighted) {
         ctx.fillStyle = MENU_COLORS.hover;       // hovered
     } else {
         ctx.fillStyle = MENU_COLORS.base;    // default
