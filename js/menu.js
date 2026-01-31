@@ -51,11 +51,31 @@ function createLevelState() {
     };
 }
 export const interactionState = {
-    levels: [
-        createLevelState(), // level 0 (main)
-        createLevelState()  // level 1 (sub)
-    ]
+    levels: Array.from(
+        { length: getMenuDepth(menu.items) },
+        () => createLevelState()
+    )
 };
+
+/**
+ * loops recursively through children and returns max depth
+ * @param items
+ * @param currentDepth
+ * @returns {number}
+ */
+function getMenuDepth(items, currentDepth = 1) {
+    if (!items) return currentDepth;
+
+    let maxDepth = currentDepth;
+
+    for (const item of items) {
+        if (item.children && item.children.length > 0) {
+            const depth = getMenuDepth(item.children, currentDepth + 1);
+            maxDepth = Math.max(maxDepth, depth);
+        }
+    }
+    return maxDepth;
+}
 
 /** Determines how long hover takes
  *
@@ -76,10 +96,12 @@ const iconCache = {};
  * @param level : this decides if main menu or x. level (submenu) is opened
  **/
 export function updateHoverFill(now, level) {
-    handlePreview(level)
+    const state = interactionState.levels[level]
 
-    // if sub element is hovered, do not calculate hover for main element
-    if(stateItemIsSet(interactionState.levels[1].hover) && level === 0) return;
+    // if a deeper level is active, do not calculate hover for higher levels OR for the levels that are not actively hovered
+    if(level < getDeepestActiveLevel() || stateItemIsNotSet(state.hover)) return;
+
+    handlePreview(level)
 
     // if a main element is selected and the slider is not active, and the main selection switches -> reset main selection
     if(stateItemIsSet(interactionState.levels[0].selected)
@@ -89,12 +111,10 @@ export function updateHoverFill(now, level) {
         interactionState.levels[0].selected = null;
     }
 
-    // do we need to abort hover animation?
-    const needsReset = level === 0 ?
-        // level 0: nothing hovered OR selection already made OR switch of hovered segment -> reset
-        stateItemIsNotSet(interactionState.levels[0].hover) || interactionState.levels[0].hover !== interactionState.levels[0].previousHover :
-        // level 1: if no main menu item was selected OR no submenu item is hovered, reset all dwell timers and return
-        stateItemIsNotSet(interactionState.levels[0].selected) || stateItemIsNotSet(interactionState.levels[1].hover)
+    // the hover needs to be reset if either no item in the current level is hovered or if the user switched elements
+    const needsReset =
+        !stateItemIsSet(state.hover) ||
+        state.hover !== state.previousHover;
 
     const progressFinished = updateDwell(needsReset, level, now);
 
@@ -104,7 +124,7 @@ export function updateHoverFill(now, level) {
         interactionState.levels[level].selected = interactionState.levels[level].hover
         sliderState.selectedSliderType = null;
 
-        const item = level === 0 ? getHoveredItem(0) : getHoveredItem(1);
+        const item = getHoveredItem(level);
         doActionOrHandleNavigation(item);
     }
 }
@@ -117,25 +137,40 @@ export function updateHoverFill(now, level) {
 export function updateSubMenuState(handDetected){
     if (uiMode.current === "slider") return;
 
-    // highlight submenu if hand is detected && an element from the main menu was selected
-    if (handDetected && stateItemIsSet(interactionState.levels[0].selected)) {
-        interactionState.levels[1].hover = getActiveSubSegment();          // determines which subsegment cursor is in
-    } else {
-        interactionState.levels[1].hover = null;
-    }
+    // iterates through levels
+    for (let level = 0; level < interactionState.levels.length; level++) {
+        const state = interactionState.levels[level];
 
-    // reset submenu timers if subsegment has changed (previous = previous frame)
-    if (interactionState.levels[1].hover !== interactionState.levels[1].previousHover) {
-        interactionState.levels[1].dwellStart = null;
-        interactionState.levels[1].dwellProgress = 0;
-        interactionState.levels[1].dwellTriggered = false;
+        // in level 0 hover is detected elsewhere, but previous hover needs to be updated still
+        if (level === 0) {
+            state.previousHover = state.hover;
+            continue;
+        }
+
+        const selectedParent = interactionState.levels[level - 1].selected;
+
+        // deactivate level if no hand was detected or no parent element was selected (and all deeper levels as well)
+        if (!handDetected || !stateItemIsSet(selectedParent)) {
+            state.hover = null;
+            state.dwellStart = null;
+            state.dwellProgress = 0;
+            state.dwellTriggered = false;
+            break;
+        }
+
+        state.hover = getHoveredSegmentForLevel(level);  // update hover -> highlight submenu if hand is detected && an element from the main menu (from higher levels) was selected
+
+        if (state.hover !== state.previousHover) {
+            state.dwellStart = null;
+            state.dwellProgress = 0;
+            state.dwellTriggered = false;
+        }
+        state.previousHover = state.hover;
     }
-    interactionState.levels[1].previousHover = interactionState.levels[1].hover;
-    interactionState.levels[0].previousHover = interactionState.levels[0].hover;
 }
 
 /**
- *  draws marking menu (only first level)
+ *  draws marking menu: first level and afterwards all submenus for selected level
  */
 export function drawMarkingMenu() {
     const { items } = menu;
@@ -146,11 +181,12 @@ export function drawMarkingMenu() {
     ctx.strokeStyle = "black";
     ctx.lineWidth = 3;
 
+    // draw main menu
     for (let i = 0; i < items.length; i++) {            // loop for each segment
         const startAngle = i * angleStep;
         const endAngle = startAngle + angleStep;
 
-        const isHighlighted = isMainSegmentHighlighted(i);
+        const isHighlighted = isSegmentHighlighted(0, i);
         const isSelected = i === interactionState.levels[0].selected;
 
         drawRingSegment(startAngle, endAngle, 0, menu.radius, isSelected, isHighlighted);
@@ -165,7 +201,12 @@ export function drawMarkingMenu() {
     if(interactionState.levels[0].selected === interactionState.levels[0].hover || sliderState.selectedSliderType !== null || isCursorInSubMenuRing()){
         // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
         if (stateItemIsSet(interactionState.levels[0].selected)) {
-            drawSubMenu(1);
+            // draws submenus recursively
+            for (let level = 1; level < interactionState.levels.length; level++) {
+                if (stateItemIsSet(interactionState.levels[level - 1].selected)) {
+                    drawSubMenu(level);
+                }
+            }
         }
     }
 
@@ -267,31 +308,35 @@ function drawHoverFill(condition, startAngle, endAngle, innerRadius, outerRadius
     ctx.fill();
 }
 
-/** helper function to calculate which segment is hovered on based on the angle
+/** helper function to calculate which segment is hovered on based on the angle and distance of cursor to the center
  *
  * @returns {number|null}
  */
-export function getActiveMainSegment() {
-    if (uiMode.current === "slider") return interactionState.levels[0].selected;
+export function getHoveredSegmentForLevel(level) {
+    if (uiMode.current === "slider") return interactionState.levels[level].selected;
+
+    const range = getAngleRangeForLevel(level);
+    if (!range) return -1;
+
+    const { startAngle, endAngle, items } = range;
 
     const distance = getCursorDistance();
-    const outerRadius = menu["radius"];
+    const innerRadius = level === 0 ? 0 :  menu.radius + (level - 1) * menu.subRadius;    // use 0 for main level because its not a ring
+    const outerRadius = menu.radius + level * menu.subRadius;
 
-    // cursor not in menu
-    if (distance > outerRadius) {
+    if (distance < innerRadius || distance > outerRadius){
         return -1;
     }
 
-    const angle = getCursorAngle();
-    const angleStep = (Math.PI * 2) / menu.items.length;
+    // see if current angle of cursor is in between angle borders of current level
+    const currentAngle = getCursorAngle();
+    if (currentAngle < startAngle || currentAngle > endAngle) return -1;
 
-    const result = Math.floor(angle / angleStep);
-    if (result > -1){
-        return result;
-    }
+    const subStep = (endAngle - startAngle) / items.length;     // parts angle area equally in as many parts as items exist
+    return Math.floor((currentAngle - startAngle) / subStep);   // calculates which segment current angle is in
 }
 
-/** Updates dwwell progress
+/** Updates dwell progress
  * - resets timers and progress (= dwell) if necessary
  * - initializes timer if there is none
  * - calculates progress with the starting time
@@ -358,43 +403,14 @@ function doActionOrHandleNavigation(selectedItem){
  * @returns {boolean}
  */
 function isCursorInSubMenuRing() {
-    const distance = getCursorDistance(menu, cursor);
-    const inner = menu["radius"];
-    const outer = menu["radius"] + 80; // same as submenu
+    const distance = getCursorDistance();
+
+    const deepestLevel = getDeepestActiveLevel() + 1;
+
+    const inner = menu.radius;
+    const outer = menu.radius + deepestLevel * menu.subRadius;
 
     return distance >= inner && distance <= outer;
-}
-
-/** helper function to calculate which sub segment is hovered on based on the angle and distance of cursor to the center
- *
- * @returns {number|null}
- */
-function getActiveSubSegment() {
-    const mainIndex = interactionState.levels[0].selected;
-    if (stateItemIsNotSet(mainIndex)) return -1;
-
-    const distance = getCursorDistance();
-    const inner = menu["radius"];
-    const outer = menu["radius"] + 80;
-
-    if (distance < inner || distance > outer) return -1;
-
-    const angle = getCursorAngle();
-
-    const angleStep = (Math.PI * 2) / menu.items.length;
-    const startAngle = mainIndex * angleStep;
-    const endAngle = startAngle + angleStep;
-
-    if (angle < startAngle || angle > endAngle) return -1;
-
-    const subItems = menu.items[mainIndex].children;
-    if (!subItems) return;      // if element does not have children, return
-    const subStep = (endAngle - startAngle) / subItems.length;
-
-    const result = Math.floor((angle - startAngle) / subStep)
-    if (result > -1) {
-        return result;
-    }
 }
 
 /**
@@ -431,34 +447,30 @@ export function getHoveredItem(level) {
  *
  */
 function drawSubMenu(level) {
-    const parentIndex = interactionState.levels[level - 1].selected;
+    const range = getAngleRangeForLevel(level);
+    if (!range) return;
 
+    const { startAngle, endAngle, items } = range;
 
-    const subItems = menu.items[parentIndex].children;
-    if (!subItems) return;
+    const innerRadius = menu.radius + (level - 1) * menu.subRadius;
+    const outerRadius = menu.radius + level * menu.subRadius;
 
-    const angleStep = (Math.PI * 2) / menu.items.length;
+    const subAngleStep = (endAngle - startAngle) / items.length;
 
-    const startAngle = parentIndex * angleStep;
-    const endAngle = startAngle + angleStep;
+    for (let i = 0; i < items.length; i++) {
+        const startAngleSegment = startAngle + i * subAngleStep;
+        const endAngleSegment = startAngleSegment + subAngleStep;
 
-    const innerRadius = menu["radius"];
-    const outerRadius = menu["radius"] + menu["subRadius"];
+        const isSelected = i === interactionState.levels[level].selected;
+        const isHighlighted = isSegmentHighlighted(level, i);
+        drawRingSegment(startAngleSegment, endAngleSegment, innerRadius, outerRadius, isSelected, isHighlighted);
+        drawLabel(items[i].label, startAngleSegment, endAngleSegment, (innerRadius + outerRadius) / 2);
 
-    const subAngleStep = (endAngle - startAngle) / subItems.length;
-
-    for (let i = 0; i < subItems.length; i++) {
-        const a0 = startAngle + i * subAngleStep;
-        const a1 = a0 + subAngleStep;
-
-        const isSelected = i === interactionState.levels[1].selected
-        const isHighlighted = i === interactionState.levels[1].hover;
-        drawRingSegment(a0, a1, innerRadius, outerRadius, isSelected, isHighlighted);
-        drawLabel(subItems[i].label, a0, a1, (innerRadius + outerRadius) / 2)
+        const state = interactionState.levels[level];
 
         // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
-        const breakHoverCondition = !(i === interactionState.levels[1].hover  && !interactionState.levels[1].dwellTriggered && interactionState.levels[1].dwellProgress > 0)
-        drawHoverFill(breakHoverCondition, a0, a1, innerRadius, outerRadius, 1)
+        const breakHoverCondition = !(i === state.hover && !state.dwellTriggered && state.dwellProgress > 0);
+        drawHoverFill(breakHoverCondition, startAngleSegment, endAngleSegment, innerRadius, outerRadius, level);
     }
 }
 
@@ -595,4 +607,64 @@ function getPlacementFromAngle(angle) {
     } else {
         return y > 0 ? "bottom" : "top";
     }
+}
+
+/**
+ * Loops from back to front through levels of menu and returns the count with the highest selected level
+ * @returns {number}
+ */
+export function getDeepestActiveLevel() {
+    for (let i = interactionState.levels.length - 1; i >= 0; i--) {
+        if (stateItemIsSet(interactionState.levels[i].selected)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+/**
+ * returns if segment from parameters is highlighted or not
+ * @param level
+ * @param index
+ * @returns {boolean}
+ */
+function isSegmentHighlighted(level, index) {
+    const state = interactionState.levels[level];
+
+    const isHovered = index === state.hover;
+    const isSelected = index === state.selected;
+
+    const deeperActive =
+        getDeepestActiveLevel() > level;
+
+    return isHovered || (isSelected && deeperActive);
+}
+
+/** calculates angle area recursively for level so that e.g. submenu from level 3 only the angle range from the selected menu item from the parent level has
+ *
+ * @param level
+ * @returns {{startAngle: number, endAngle: number, items: *|DataTransferItemList}|null}
+ */
+function getAngleRangeForLevel(level) {
+    let startAngle = 0;
+    let endAngle = Math.PI * 2;
+    let items = menu.items;
+
+    for (let i = 0; i < level; i++) {
+        const selected = interactionState.levels[i].selected;
+        if (!stateItemIsSet(selected)) return null;
+
+        const step = (endAngle - startAngle) / items.length;
+
+        const newStart = startAngle + selected * step;
+        const newEnd = newStart + step;
+
+        startAngle = newStart;
+        endAngle = newEnd;
+
+        items = items[selected]?.children;
+        if (!items) return null;
+    }
+
+    return { startAngle, endAngle, items };
 }

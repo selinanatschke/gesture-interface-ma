@@ -1,5 +1,6 @@
 import { ctx } from "./main.js";
 import {
+    getDeepestActiveLevel,
     getHoveredItem,
     getSliderPlacementForMainItem,
     interactionState,
@@ -14,7 +15,7 @@ import { sliderValueStorage } from "./data.js";
 let sliderConfig = null;
 let sliderValue;        // local slider value
 let sliderX, sliderY, sliderWidth, sliderHeight;
-const SLIDER_GAP = 180;  // distance between menu and slider
+const SLIDER_GAP = 100;  // distance between menu and slider
 
 // values to limit messages sent each frame (time based throttling)
 let lastSliderSendTime = 0;
@@ -152,7 +153,7 @@ export function handlePreview(level){
 
     // slider preview if hover but not confirmed yet
     if (interactionState.levels[level].dwellProgress > 0 && interactionState.levels[level].dwellProgress < 1) {
-        const hoveredItem = (level === 0) ? getHoveredItem(0) : getHoveredItem(1);
+        const hoveredItem = getHoveredItem(level)
 
         const owner =
             (level === 0)
@@ -309,26 +310,29 @@ export function showSlider(type) {
         handImg.src = "./images/horizontal_slider_instruction.png";
     }
 
+    const deepestLevel = getDeepestActiveLevel() + 1;
+    const outerMenuRadius = menu.radius + deepestLevel * menu.subRadius;    //  depends on current depth of menu
+
     // calculate position relative to the menu
     switch (sliderConfig.position) {
         case "right":
-            sliderX = menuState.x + menu["radius"] + SLIDER_GAP;
+            sliderX = menuState.x + outerMenuRadius  + SLIDER_GAP;
             sliderY = menuState.y - sliderHeight / 2;
             break;
 
         case "left":
-            sliderX = menuState.x - menu["radius"] - sliderWidth - SLIDER_GAP;
+            sliderX = menuState.x - outerMenuRadius  - sliderWidth - SLIDER_GAP;
             sliderY = menuState.y - sliderHeight / 2;
             break;
 
         case "bottom":
             sliderX = menuState.x - sliderWidth / 2;
-            sliderY = menuState.y + menu["radius"] + SLIDER_GAP;
+            sliderY = menuState.y + outerMenuRadius + SLIDER_GAP;
             break;
 
         case "top":
             sliderX = menuState.x - sliderWidth / 2;
-            sliderY = menuState.y - menu["radius"] - sliderHeight - SLIDER_GAP;
+            sliderY = menuState.y - outerMenuRadius  - sliderHeight - SLIDER_GAP - 80;
             break;
     }
     syncSliderFromData(type);

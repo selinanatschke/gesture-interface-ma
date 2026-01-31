@@ -9,10 +9,10 @@ import {
     drawMarkingMenu,
     updateSubMenuState,
     updateHoverFill,
-    getActiveMainSegment,
     interactionState,
     UI_SCALE,
-    menuState
+    menuState,
+    getHoveredSegmentForLevel
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
 import { menu } from "./menu.js";
@@ -134,10 +134,10 @@ hands.onResults((results) => {
 
     // if no hand is detected, all selection/hovers are reset + reset previously selected slider
     if (!handDetected) {
-        interactionState.levels[0].selected = null;
-        interactionState.levels[0].hover = null;
-        interactionState.levels[1].hover = null;
-        interactionState.levels[1].selected = null;
+        for (let i = 0; i < interactionState.levels.length; i++) {
+            interactionState.levels[i].selected = null;
+            interactionState.levels[i].hover = null;
+        }
         sliderState.selectedSliderType = null;
         hideSlider();
         uiMode.current = "menu";
@@ -151,9 +151,12 @@ hands.onResults((results) => {
                 updateSlider(results, handDetected);
             } else {
                 drawGrabHint(window.innerWidth/2, 200);
-                interactionState.levels[0].hover = getActiveMainSegment();
-                updateHoverFill(now, 0);    // main manu
-                updateHoverFill(now, 1);    // sub menu
+                interactionState.levels[0].hover = getHoveredSegmentForLevel(0);
+
+                // draw hover animation for all levels
+                for (let i = 0; i < interactionState.levels.length; i++) {
+                    updateHoverFill(now, i);
+                }
             }
         }
         drawMarkingMenu();
