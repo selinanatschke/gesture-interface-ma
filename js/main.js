@@ -130,7 +130,7 @@ hands.onResults((results) => {
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     updateGestures(results, handDetected)
     drawGestureIcon(handDetected);     // draw hand Icon
-    handleDwellAndIdle(handDetected, now);
+    handleDwellAndIdle(handDetected, now, results);
     if(!menuUnlocked) return;
 
     // if no hand is detected (and 0.5s passed), all selection/hovers are reset + reset previously selected slider

@@ -11,6 +11,15 @@ export let cursor = {
     y: 0,
 };
 
+/**
+ * Offset variables that are added to the cursor position so that cursor always starts in the middle of the menu
+ * @type {number}
+ */
+export let cursorOffset = {
+    x: 0,
+    y: 0
+}
+
 /** Function that uses the palm center to map the cursor position to its position.
  *
  * @param results
@@ -22,8 +31,8 @@ export function updateCursor(results, handDetected){
     const landmarks = results.multiHandLandmarks[0];
     const indexTip = landmarks[9];              // position of cursor steered by middle of hand
 
-    cursor.x = (1 - indexTip.x) * canvas.width; // mirrored
-    cursor.y = indexTip.y * canvas.height;
+    cursor.x = (1 - indexTip.x) * canvas.width + cursorOffset.x; // mirrored
+    cursor.y = indexTip.y * canvas.height + cursorOffset.y;
 
     drawCursor(cursor.x, cursor.y);
 }
@@ -68,4 +77,19 @@ export function getCursorAngle() {
     }
 
     return angle;
+}
+
+/**
+ * adds the offset (=distance of the persons hand position in absolut coordinates to the menu center)to the cursor so that the cursor always starts in the middle of the menu
+ * @param results
+ */
+export function setCursorOffsetToMenuCenter(results) {
+    const landmarks = results.multiHandLandmarks[0];
+    const palm = landmarks[9];
+
+    const absoluteX = (1 - palm.x) * canvas.width;
+    const absoluteY = palm.y * canvas.height;
+
+    cursorOffset.x = menuState.x - absoluteX;
+    cursorOffset.y = menuState.y - absoluteY;
 }

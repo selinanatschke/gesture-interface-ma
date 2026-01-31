@@ -1,5 +1,6 @@
 import {ctx} from "./main.js";
 import { isPinched, isGrabbing, isOpenHand } from "./gestures.js";
+import { setCursorOffsetToMenuCenter } from "./cursor.js";
 
 // idle dwell for no interaction
 let idleStartTime = null;       // saves start time of idle timer
@@ -31,12 +32,13 @@ const HAND_LOST_TIMEOUT = 500;
  *
  * @param handDetected
  * @param now
+ * @param results
  */
-export function handleDwellAndIdle(handDetected, now){
+export function handleDwellAndIdle(handDetected, now, results){
 
     // activation dwell
     if (!menuUnlocked) {
-        handleActivationDwell(handDetected, now);
+        handleActivationDwell(handDetected, now, results);
         return;
     }
 
@@ -60,8 +62,9 @@ export function handleDwellAndIdle(handDetected, now){
  * method that handles activation time to open menu
  * @param handDetected
  * @param now
+ * @param results
  */
-function handleActivationDwell(handDetected, now) {
+function handleActivationDwell(handDetected, now, results) {
 
     if (!handDetected || !isOpenHand) {
         activationStartTime = null;
@@ -83,6 +86,7 @@ function handleActivationDwell(handDetected, now) {
         activationStartTime = null;
         dwellProgress = 0;
         resetTimers();
+        setCursorOffsetToMenuCenter(results);
     }
 }
 
