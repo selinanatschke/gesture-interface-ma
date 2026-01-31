@@ -10,11 +10,14 @@ const createWindow = () => {
         },
         transparent: true,
         frame: false,
-        fullscreen: true
+        fullscreen: true,
+        alwaysOnTop: true,
+        focusable: false    // does not steal focus when starting the application
     })
 
     win.loadFile('../index.html')
     win.webContents.openDevTools();
+    win.setIgnoreMouseEvents(true, { forward: true });
 }
 
 /**
