@@ -21,6 +21,9 @@ pinchIcon.src = "./images/gestures/pinch.png";
 const grabIcon = new Image();
 grabIcon.src = "./images/gestures/grab.png";
 
+let lastHandSeenTime = performance.now();
+const HAND_LOST_TIMEOUT = 500;
+
 /**
  * Methods that handles dwell and idle state actions
  * - resets timers if hands are detected
@@ -196,4 +199,21 @@ function getGestureIcon(handDetected) {
     if (isPinched) return pinchIcon;
     if (isGrabbing) return grabIcon;
     return handIcon;
+}
+
+/**
+ * calculates if hand was not detected for 0.5s
+ * -> prevents that menu closes if no hand was detected in single frames to make application and detection more stable
+ * @param handDetected
+ * @param now
+ * @returns {boolean}
+ */
+export function resetMenu(handDetected, now){
+    if(handDetected){
+        lastHandSeenTime = now;
+        return false;
+    } else {
+        const timeSinceLastHand = now - lastHandSeenTime;
+        return timeSinceLastHand > HAND_LOST_TIMEOUT;
+    }
 }

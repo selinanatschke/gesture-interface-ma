@@ -3,6 +3,7 @@ import {
     dwellProgress,
     handleDwellAndIdle,
     menuUnlocked,
+    resetMenu,
     setMenuUnlocked
 } from "./timings.js";
 import {
@@ -132,8 +133,8 @@ hands.onResults((results) => {
     handleDwellAndIdle(handDetected, now);
     if(!menuUnlocked) return;
 
-    // if no hand is detected, all selection/hovers are reset + reset previously selected slider
-    if (!handDetected) {
+    // if no hand is detected (and 0.5s passed), all selection/hovers are reset + reset previously selected slider
+    if(resetMenu(handDetected, now)){
         for (let i = 0; i < interactionState.levels.length; i++) {
             interactionState.levels[i].selected = null;
             interactionState.levels[i].hover = null;
