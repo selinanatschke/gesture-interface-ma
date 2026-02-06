@@ -73,12 +73,19 @@ function handleOfflineMessage(msg) {
 /**
  * initializes dummy offline data
  */
-function initOfflineData() {
+async function initOfflineData() {
     handleInitialData(750);
 
-    handleDataUpdate({ target: "volume", value: 0.5 });
-    handleDataUpdate({ target: "brightness", value: 0.7 });
-    handleDataUpdate({ target: "vibration", value: 0.2 });
+    const response = await fetch("./offlineMenu.json");
+    const menu = await response.json();
+    handleIncomingMessage({
+        action: "initial",
+        type: "menu",
+        value: menu
+    });
+    handleDataUpdate({target: "volume", value: 0.5});
+    handleDataUpdate({target: "brightness", value: 0.7});
+    handleDataUpdate({target: "vibration", value: 0.2});
 }
 
 /**
@@ -98,6 +105,14 @@ function startDummyPlayback() {
  */
 function handleIncomingMessage(msg) {
     console.log("received message from UE: ", msg);
+
+    // update menu structure
+    if (msg.action === "initial" && msg.type === "menu") {
+        import("./menu.js").then(module => {
+            module.setMenu(msg.value);
+        });
+        return;
+    }
 
     // inital message that sends total video length in seconds and sets currentTime to 0
     if (msg.action === "initial" && msg.type === "slider" && msg.target === "presentation") {

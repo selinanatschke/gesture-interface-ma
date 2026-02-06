@@ -2,6 +2,14 @@
  * This file represents an alternative for the Unreal Engine server so that the application can be debugged even without UE running.
  */
 
+
+const fs = require("fs");
+const path = require("path");
+const menuData = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "menu.json"), "utf-8")
+);
+
+
 const WebSocket = require("ws");
 
 const PORT = 3000; // same port as in websocket.js
@@ -49,6 +57,11 @@ wss.on("connection", (ws) => {
     });
 
     // Initial state (like UE when connecting) => sends general information about current volume, ...
+    ws.send(JSON.stringify({    // Send menu structure to UI
+        action: "initial",
+        type: "menu",
+        value: menuData
+    }));
     ws.send(JSON.stringify({
         action: "initial",
         type: "slider",

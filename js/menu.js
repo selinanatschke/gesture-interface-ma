@@ -1,11 +1,20 @@
 import { dwellProgress } from "./timings.js";
 import { ctx } from "./main.js";
-import { cursor, getCursorDistance, getCursorAngle } from "./cursor.js";
+import { getCursorDistance, getCursorAngle } from "./cursor.js";
 import { handlePreview, hideSlider, openSelectedSlider, sliderState, uiMode } from "./slider.js";
 import { isGrabbing } from "./gestures.js";
 
-const response = await fetch("./menu.json");
-export const menu = await response.json();
+export let menu = null; // will be received from server
+
+export function setMenu(newMenu) {
+    menu = newMenu;
+
+    // initialize interaction state based on new menu depth
+    interactionState.levels = Array.from(
+        { length: getMenuDepth(menu.items) },
+        () => createLevelState()
+    );
+}
 
 export const menuState = {
     x: 0,
@@ -51,10 +60,7 @@ function createLevelState() {
     };
 }
 export const interactionState = {
-    levels: Array.from(
-        { length: getMenuDepth(menu.items) },
-        () => createLevelState()
-    )
+    levels: []
 };
 
 /**

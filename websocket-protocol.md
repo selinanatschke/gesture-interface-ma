@@ -13,7 +13,7 @@ Sent from UI to UE (and back as confirmation) when a slider value changes or the
 ```json
 {
   "action": "update | pressed | initial",
-  "type": "slider | button",
+  "type": "slider | button | menu",
   "target": "volume | brightness | vibration | presentation",
   "value": "0.0 - 1.0 | play | pause | number in s"
 }
@@ -48,6 +48,17 @@ In this case ```value``` is stating the total length of the video (2:00min).
   "type": "slider",
   "target": "presentation",
   "value": "120"
+}
+```
+
+Example for the initial message with menu structure that is sent from the application to the frontend.
+In this case ```value``` is a variable that stores the parsed result of the menu data.
+```json
+{
+  "action": "initial",
+  "type": "slider",
+  "target": "presentation",
+  "value": menuData
 }
 ```
 

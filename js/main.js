@@ -1,5 +1,4 @@
 import {
-    drawGestureIcon,
     dwellProgress,
     handleDwellAndIdle,
     menuUnlocked,
@@ -13,10 +12,10 @@ import {
     interactionState,
     UI_SCALE,
     menuState,
-    getHoveredSegmentForLevel
+    getHoveredSegmentForLevel,
+    menu
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
-import { menu } from "./menu.js";
 import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
 import { gestureThresholds, updateGestures, drawGrabHint } from "./gestures.js";
 import "./websocket.js"; // starts websocket
@@ -125,6 +124,8 @@ hands.setOptions({
 hands.onResults((results) => {
     const now = performance.now();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!menu || !menu.items) return;   // necessary if menu data was not received yet
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;

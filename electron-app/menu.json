@@ -1,0 +1,48 @@
+{
+  "radius": 200,
+  "subRadius": 100,
+  "items": [
+    {
+      "label": "H, V, L einstellen",
+      "type": "menu",
+      "children": [
+        {
+          "label": "Lautstärke",
+          "type": "slider",
+          "target": "volume"
+        },
+        {
+          "label": "Helligkeit",
+          "type": "slider",
+          "target": "brightness"
+        },
+        {
+          "label": "Vibration",
+          "type": "slider",
+          "target": "vibration"
+        }
+      ]
+    },
+    {
+      "label": "Präsentationssteuerung",
+      "type": "slider",
+      "target": "presentation"
+    },
+    {
+      "label": "C",
+      "type": "menu",
+      "children": [
+        {
+          "label": "C1",
+          "type": "placeholder",
+          "target": "text"
+        },
+        {
+          "label": "C2",
+          "type": "placeholder",
+          "target": "number"
+        }
+      ]
+    }
+  ]
+}
