@@ -3,9 +3,9 @@ import { isPinched, isGrabbing, isOpenHand } from "./gestures.js";
 import { setCursorOffsetToMenuCenter } from "./cursor.js";
 
 // idle dwell for no interaction
-let idleStartTime = null;       // saves start time of idle timer
-let dwellStartTime = null;      // saves start time of dwell timer
-export let dwellProgress = 0;          // 0..1
+let idleStartTime = null;          // saves start time of idle timer
+let dwellStartTime = null;         // saves start time of dwell timer
+export let dwellProgress = 0;      // 0..1, shows percentage of how far filled dwell circle is
 const IDLE_BEFORE_DWELL = 3000; // systems waits this time if no hand was recognized -> after this time dwell timer is started
 const DWELL_DURATION = 3000;    // time for the dwell timer
 
@@ -26,9 +26,13 @@ let lastHandSeenTime = performance.now();
 const HAND_LOST_TIMEOUT = 500;
 
 /**
- * Methods that handles dwell and idle state actions
+ * Methods that handles activation, dwell and idle state actions
  * - resets timers if hands are detected
  * - determines if dwell timer visualization has to start
+ *
+ * (activation = dwell time that hand needs to be in activation gesture to open menu;
+ * idle = time in which no hand was detected but base menu is remains open and unfaded;
+ * dwell = time after idle in which menu fades and dwell circle counts -> after this menu disappears)
  *
  * @param handDetected
  * @param now

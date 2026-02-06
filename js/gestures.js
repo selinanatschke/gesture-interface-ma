@@ -1,4 +1,5 @@
 import {ctx} from "./main.js";
+import {drawGestureIcon} from "./timings.js";
 export let isPinched;
 export let isGrabbing = false;
 export let isOpenHand = false;
@@ -34,6 +35,7 @@ export function updateGestures(results, handDetected){
     updateIsOpenHand(results, handDetected)
     updateIsPinched(results, handDetected)
     updateIsGrabbing(results, handDetected)
+    drawGestureIcon(handDetected);     // draw hand Icon
 }
 
 /** Detects if pinch gesture is used

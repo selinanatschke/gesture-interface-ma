@@ -8,8 +8,8 @@ import {
 } from "./timings.js";
 import {
     drawMarkingMenu,
-    updateSubMenuState,
-    updateHoverFill,
+    updateSubmenuInteractionState,
+    updateLevelInteractionState,
     interactionState,
     UI_SCALE,
     menuState,
@@ -129,7 +129,6 @@ hands.onResults((results) => {
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     updateGestures(results, handDetected)
-    drawGestureIcon(handDetected);     // draw hand Icon
     handleDwellAndIdle(handDetected, now, results);
     if(!menuUnlocked) return;
 
@@ -156,20 +155,17 @@ hands.onResults((results) => {
 
                 // draw hover animation for all levels
                 for (let i = 0; i < interactionState.levels.length; i++) {
-                    updateHoverFill(now, i);
+                    updateLevelInteractionState(now, i);
                 }
             }
         }
         drawMarkingMenu();
-
-        // if slider data is available, this draws the slider
+        updateSubmenuInteractionState(handDetected)
         drawSliderCanvas();
+        updateCursor(results, handDetected);
     } else {
         setMenuUnlocked(false);
     }
-
-    updateSubMenuState(handDetected)
-    updateCursor(results, handDetected);
 });
 
 // start camera

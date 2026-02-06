@@ -89,13 +89,17 @@ const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
  */
 const iconCache = {};
 
-/** calculates dwell times on hovering a menu item
- * - handles menu selection
- * - if menu item is hovered & slider is not in interactive mode -> start dwell -> if completed -> do action/open submenu
+/** handles actions that happen when cursor hovers menu, e.g.
+ * - slider preview
+ * - edge case handling for main menu interaction (e.g. reset selected items if hovered items are switched)
+ * - hover state resets
+ * - handles selection including triggering actions or opening submenus
+ * => Interaction within a level
+ *
  * @param now
  * @param level : this decides if main menu or x. level (submenu) is opened
  **/
-export function updateHoverFill(now, level) {
+export function updateLevelInteractionState(now, level) {
     const state = interactionState.levels[level]
 
     // if a deeper level is active, do not calculate hover for higher levels OR for the levels that are not actively hovered
@@ -131,10 +135,14 @@ export function updateHoverFill(now, level) {
 
 /** Determines sub menu hover states
  *  - close submenus only if cursor is neither in menu nor in submenu (nor slider is opened)
- *  - active main segment is segment in which cursor is currently (if cursor is in subsegments, activeMainSegment is -1)
+ *  - syncs hover state of sub levels with hover depending on the parent;
+ *  - deactivates deeper levels,
+ *  - resets dwell for hover-change
+ * => Relation between levels
+ *
  * @param handDetected
  */
-export function updateSubMenuState(handDetected){
+export function updateSubmenuInteractionState(handDetected){
     if (uiMode.current === "slider") return;
 
     // iterates through levels
@@ -170,7 +178,7 @@ export function updateSubMenuState(handDetected){
 }
 
 /**
- *  draws marking menu: first level and afterwards all submenus for selected level
+ *  draws marking menu: first main level and afterwards all submenus for selected level
  */
 export function drawMarkingMenu() {
     const { items } = menu;

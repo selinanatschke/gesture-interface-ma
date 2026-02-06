@@ -37,6 +37,8 @@ export const sliderState = {
 
 /** This determines what is visible and interactive
  *  current can be: menu, slider
+ *
+ *  (this needs to be an object otherwise it cannot change states inside other files)
  * @type {{current: string}}
  */
 export const uiMode = {
