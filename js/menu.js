@@ -1,7 +1,15 @@
 import {getCurrentState, STATES} from "./timings.js";
 import { ctx } from "./main.js";
 import { getCursorDistance, getCursorAngle } from "./cursor.js";
-import { handlePreview, hideSlider, openSelectedSlider, sliderState, uiMode } from "./slider.js";
+import {
+    getCurrentUiState,
+    handlePreview,
+    hideSlider,
+    openSelectedSlider,
+    setCurrentUiState,
+    sliderState,
+    UI_STATES
+} from "./slider.js";
 import { isGrabbing } from "./gestures.js";
 
 export let menu = null; // will be received from server
@@ -149,7 +157,7 @@ export function updateLevelInteractionState(now, level) {
  * @param handDetected
  */
 export function updateSubmenuInteractionState(handDetected){
-    if (uiMode.current === "slider") return;
+    if (getCurrentUiState() === UI_STATES.SLIDER) return;
 
     // iterates through levels
     for (let level = 0; level < interactionState.levels.length; level++) {
@@ -231,7 +239,7 @@ export function drawMarkingMenu() {
  * - makes sure if dwell timer for no hands recognized is also fading the menus opacity
  */
 function setMenuGlobalAlpha() {
-    if (uiMode.current === "slider") {  // always fade menu if slider is active
+    if (getCurrentUiState() === UI_STATES.SLIDER) {  // always fade menu if slider is active
         ctx.globalAlpha = 0.25
     } else {
         ctx.globalAlpha = getCurrentState() === STATES.DWELL ? 0.25 : 1 ;
@@ -327,7 +335,7 @@ function drawHoverFill(condition, startAngle, endAngle, innerRadius, outerRadius
  * @returns {number|null}
  */
 export function getHoveredSegmentForLevel(level) {
-    if (uiMode.current === "slider") return interactionState.levels[level].selected;
+    if (getCurrentUiState() === UI_STATES.SLIDER) return interactionState.levels[level].selected;
 
     const range = getAngleRangeForLevel(level);
     if (!range) return -1;
@@ -403,7 +411,7 @@ function doActionOrHandleNavigation(selectedItem){
 
     // if element opens slider
     if (selectedItem.type === "slider") {
-        uiMode.current = "slider";
+        setCurrentUiState(UI_STATES.SLIDER)
         openSelectedSlider(selectedItem.target);
         return;
     }

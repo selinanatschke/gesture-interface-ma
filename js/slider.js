@@ -21,29 +21,29 @@ const SLIDER_GAP = 100;  // distance between menu and slider
 let lastSliderSendTime = 0;
 const SLIDER_SEND_INTERVAL = 33; // ms = 30Hz (max. ca. 30 messages per second)
 
-/** State that keeps track of slider visibility
- * - visible: is slider visible?
- * - preview: is preview active?
- * - previewOwner: item that opened the preview
- *
- * @type {{visible: boolean, preview: boolean, previewOwner: null, selectedSliderType: null}}
+/**
+ * This determines whether the user currently interacts with the menu or with the slider
+ * @type {{MENU: string, SLIDER: string}}
  */
+export const UI_STATES = {
+    MENU: "menu",
+    SLIDER: "slider"
+};
+let currentUiState = UI_STATES.MENU;
+
+export function setCurrentUiState(newState) {
+    currentUiState = newState;
+}
+
+export function getCurrentUiState() {
+    return currentUiState;
+}
+
 export const sliderState = {
-    visible: false,
-    preview: false,
+    visible: false,                 // determines whether slider is drawn or not (true if preview or active)
     previewOwner: null,
     selectedSliderType: null,
 };
-
-/** This determines what is visible and interactive
- *  current can be: menu, slider
- *
- *  (this needs to be an object otherwise it cannot change states inside other files)
- * @type {{current: string}}
- */
-export const uiMode = {
-    current: "menu", // || "slider"
-}
 
 // positions for tracking movement while pinched
 let lastHandPositionX = null;
@@ -74,16 +74,17 @@ const SLIDER_META = {
 export function openSelectedSlider(selectedSliderType){
     sliderState.selectedSliderType = selectedSliderType;
     sliderState.visible = true;
-    sliderState.preview = false;
-    uiMode.current = "slider";
+    sliderState.previewOwner = null;
+    setCurrentUiState(UI_STATES.SLIDER);
 }
+
 /**
  * Determines whether the slider has to be drawn horizontally or vertically depending on its type
  */
 export function drawSliderCanvas() {
     if (!sliderConfig || !sliderState.visible) return;
 
-    if (sliderState.preview || getCurrentState() === STATES.DWELL) ctx.globalAlpha = 0.5;
+    if (!!sliderState.previewOwner || getCurrentState() === STATES.DWELL) ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
@@ -136,7 +137,7 @@ function drawVerticalSlider(type) {
  * @param level
  */
 export function handlePreview(level){
-    if (sliderState.preview) {
+    if (!!sliderState.previewOwner) {
 
         const stillHovered =
             (sliderState.previewOwner?.level === 0)
@@ -148,7 +149,6 @@ export function handlePreview(level){
 
         if (!stillHovered) {
             hideSlider();
-            sliderState.preview = false;
             sliderState.previewOwner = null;
         }
     }
@@ -289,7 +289,7 @@ export function showSlider(type) {
     }
 
     sliderState.visible = true;
-    sliderState.preview = false;
+    sliderState.previewOwner = null;
 
     const placement = getSliderPlacementForMainItem(type);
 
@@ -420,7 +420,7 @@ export function updateSliderValueFromHand(results) {
  * hides the slider
  */
 export function hideSlider() {
-    sliderState.preview = false;
+    sliderState.previewOwner = null;
     sliderState.visible = false;
     sliderState.selectedSliderType = null;
     lastHandPositionX = null;
@@ -430,18 +430,17 @@ export function hideSlider() {
 /**
  * activates slider manipulation is slider ui mode is active
  * @param results
- * @param handDetected
  */
-export function updateSlider(results, handDetected) {
-    if(!sliderState.selectedSliderType && !sliderState.preview) return;
+export function updateSlider(results) {
+    if(!sliderState.selectedSliderType && !sliderState.previewOwner) return;
 
-    // if slider is visible and user has navigated cursor to slider to interact -> wait for gesture and modify values
-    if (sliderState.visible && uiMode.current === "slider") {
+    // if slider is visible -> wait for gesture and modify values
+    if (sliderState.visible && currentUiState === UI_STATES.SLIDER) {
         updateSliderValueFromHand(results);
     }
 
     // if an item with a slider action was already opened and no other slider preview is shown currently, draw slider
-    if(sliderState.selectedSliderType && !sliderState.preview && !sliderState.visible){
+    if(sliderState.selectedSliderType && !sliderState.previewOwner && !sliderState.visible){
         showSlider(sliderState.selectedSliderType);    // enables slider
     }
 }
@@ -455,8 +454,7 @@ export function showSliderPreview(type, owner) {
     if (!type) return;
 
     showSlider(type);
-    sliderState.preview = true;
-    uiMode.current = "menu"
+    setCurrentUiState(UI_STATES.MENU)
     sliderState.previewOwner = owner
 }
 
@@ -467,7 +465,7 @@ export function showSliderPreview(type, owner) {
 function getSliderValue() {
     if (!sliderConfig) return 0;
 
-    if(uiMode.current === "slider" && isPinched){
+    if(currentUiState === UI_STATES.SLIDER && isPinched){
         return sliderValue;
     }
 

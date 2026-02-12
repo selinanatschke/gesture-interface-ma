@@ -1,6 +1,6 @@
 import { ctx } from "./main.js";
-import { uiMode } from "./slider.js";
 import {menuState} from "./menu.js"
+import {getCurrentUiState, UI_STATES} from "./slider.js";
 
 /** cursor element that holds the position of the cursor
  *
@@ -43,7 +43,7 @@ export function updateCursor(results, handDetected){
  * @param y
  */
 function drawCursor(x, y) {
-    if (uiMode.current === "slider") return; // do not draw cursor if slider is active
+    if (getCurrentUiState() === UI_STATES.SLIDER) return; // do not draw cursor if slider is active
 
     ctx.fillStyle = "blue";
     ctx.beginPath();

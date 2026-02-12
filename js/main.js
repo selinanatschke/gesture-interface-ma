@@ -1,8 +1,8 @@
 import {
-    STATES,
     getCurrentState,
     resetMenu,
-    updateDwellAndIdleStateMachine
+    updateDwellAndIdleStateMachine,
+    STATES
 } from "./timings.js";
 import {
     drawMarkingMenu,
@@ -15,7 +15,15 @@ import {
     menu
 } from "./menu.js";
 import { updateCursor } from "./cursor.js";
-import { drawSliderCanvas, hideSlider, sliderState, uiMode, updateSlider } from "./slider.js";
+import {
+    drawSliderCanvas,
+    getCurrentUiState,
+    hideSlider,
+    sliderState,
+    updateSlider,
+    UI_STATES,
+    setCurrentUiState
+} from "./slider.js";
 import { gestureThresholds, updateGestures, drawGrabHint } from "./gestures.js";
 import "./websocket.js"; // starts websocket
 
@@ -140,14 +148,14 @@ hands.onResults((results) => {
         }
         sliderState.selectedSliderType = null;
         hideSlider();
-        uiMode.current = "menu";
+        setCurrentUiState(UI_STATES.MENU);
     }
 
     // if menu is not in activation mode (visible), draw menu
     if (currentState === STATES.MENU || currentState === STATES.IDLE || currentState === STATES.DWELL) {
         if (handDetected) {
             // if slider is active, do not update menu
-            if (uiMode.current === "slider") {
+            if (getCurrentUiState() === UI_STATES.SLIDER) {
                 updateSlider(results, handDetected);
             } else {
                 drawGrabHint(window.innerWidth/2, 200);
