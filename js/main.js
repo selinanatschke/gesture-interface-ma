@@ -1,9 +1,8 @@
 import {
-    dwellProgress,
-    handleDwellAndIdle,
-    menuUnlocked,
+    STATES,
+    getCurrentState,
     resetMenu,
-    setMenuUnlocked
+    updateDwellAndIdleStateMachine
 } from "./timings.js";
 import {
     drawMarkingMenu,
@@ -130,8 +129,8 @@ hands.onResults((results) => {
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
     updateGestures(results, handDetected)
-    handleDwellAndIdle(handDetected, now, results);
-    if(!menuUnlocked) return;
+    updateDwellAndIdleStateMachine(handDetected, now, results);
+    const currentState = getCurrentState();
 
     // if no hand is detected (and 0.5s passed), all selection/hovers are reset + reset previously selected slider
     if(resetMenu(handDetected, now)){
@@ -144,8 +143,8 @@ hands.onResults((results) => {
         uiMode.current = "menu";
     }
 
-    // if dwell timer is not active or <1, paint menu
-    if (dwellProgress < 1) {
+    // if menu is not in activation mode (visible), draw menu
+    if (currentState === STATES.MENU || currentState === STATES.IDLE || currentState === STATES.DWELL) {
         if (handDetected) {
             // if slider is active, do not update menu
             if (uiMode.current === "slider") {
@@ -164,8 +163,6 @@ hands.onResults((results) => {
         updateSubmenuInteractionState(handDetected)
         drawSliderCanvas();
         updateCursor(results, handDetected);
-    } else {
-        setMenuUnlocked(false);
     }
 });
 

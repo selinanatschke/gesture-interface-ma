@@ -5,12 +5,11 @@ import { setCursorOffsetToMenuCenter } from "./cursor.js";
 // idle dwell for no interaction
 let idleStartTime = null;          // saves start time of idle timer
 let dwellStartTime = null;         // saves start time of dwell timer
-export let dwellProgress = 0;      // 0..1, shows percentage of how far filled dwell circle is
+let dwellProgress = 0;      // 0..1, shows percentage of how far filled dwell circle is
 const IDLE_BEFORE_DWELL = 3000; // systems waits this time if no hand was recognized -> after this time dwell timer is started
 const DWELL_DURATION = 3000;    // time for the dwell timer
 
 // activation dwell
-export let menuUnlocked = false;
 let activationStartTime = null;
 const ACTIVATION_DURATION = 3000; // 3s Freischalt-Dwell
 
@@ -25,110 +24,156 @@ grabIcon.src = "./images/gestures/grab.png";
 let lastHandSeenTime = performance.now();
 const HAND_LOST_TIMEOUT = 500;
 
+export const STATES = {
+    ACTIVATION: "activation",   // no menu is there and no hand is detected
+    MENU: "menu",               // menu is visible and hand is detected
+    IDLE: "idle",               // menu is visible but no hand was detected for <3s
+    DWELL: "dwell"              // menu is visible but no hand was detected for >3s and dwell ring is visible
+};
+
+let currentState = STATES.ACTIVATION;
+
 /**
- * Methods that handles activation, dwell and idle state actions
- * - resets timers if hands are detected
- * - determines if dwell timer visualization has to start
- *
- * (activation = dwell time that hand needs to be in activation gesture to open menu;
- * idle = time in which no hand was detected but base menu is remains open and unfaded;
- * dwell = time after idle in which menu fades and dwell circle counts -> after this menu disappears)
- *
+ * Function that handles state machine (if menu is visible and all dwell/idle timers)
  * @param handDetected
  * @param now
  * @param results
  */
-export function handleDwellAndIdle(handDetected, now, results){
+export function updateDwellAndIdleStateMachine(handDetected, now, results) {
+    switch (currentState) {
+        case STATES.ACTIVATION:
+            updateActivation(handDetected, now, results);
+            break;
 
-    // activation dwell
-    if (!menuUnlocked) {
-        handleActivationDwell(handDetected, now, results);
-        return;
-    }
+        case STATES.MENU:
+            updateMenu(handDetected, now);
+            break;
 
-    if(handDetected && dwellProgress > 0){
-        resetTimers()
-    }
-    const dwellShouldRun = updateIdle(handDetected, now);
+        case STATES.IDLE:
+            updateIdleState(handDetected, now);
+            break;
 
-    // if dwell timer should run, update values and draw it
-    if (dwellShouldRun) {
-        updateDwell(now);
-    }
-
-    // if dwell timer is running, draw dwell ring
-    if (dwellProgress > 0 && dwellProgress < 1) {
-        drawDwellRing(dwellProgress);
+        case STATES.DWELL:
+            updateDwellState(handDetected, now);
+            break;
     }
 }
 
 /**
- * method that handles activation time to open menu
+ * Helper function that handles activation timer if hand was detected
+ * - switch to menu mode if hand was detected >3s
  * @param handDetected
  * @param now
  * @param results
  */
-function handleActivationDwell(handDetected, now, results) {
-
+function updateActivation(handDetected, now, results) {
+    // do nothing if no hand was detected
     if (!handDetected || !isOpenHand) {
         activationStartTime = null;
         dwellProgress = 0;
         return;
     }
 
-    if (activationStartTime === null) {
+    if (!activationStartTime) {
         activationStartTime = now;
+        return;
     }
 
     const elapsed = now - activationStartTime;
     dwellProgress = Math.min(elapsed / ACTIVATION_DURATION, 1);
-
-    drawDwellRing();
+    drawDwellRing()
 
     if (dwellProgress >= 1) {
-        menuUnlocked = true;
         activationStartTime = null;
+        transitionTo(STATES.MENU);
         dwellProgress = 0;
-        resetTimers();
         setCursorOffsetToMenuCenter(results);
     }
 }
 
 /**
- * resets timers if hand was recognized
- */
-export function resetTimers(){
-    idleStartTime = null;
-    dwellStartTime = null;
-    dwellProgress = 0;
-}
-
-/**
- * If hand is not detected and no idle is already running -> starts idle timer
+ *  Helper function that handles menu state
+ *  - if no hand was detected, switch to idle mode
  * @param handDetected
  * @param now
- * @returns {boolean}
  */
-export function updateIdle(handDetected, now) {
-    if (idleStartTime === null && !handDetected) {
+function updateMenu(handDetected, now) {
+    if (!handDetected) {
         idleStartTime = now;
-        return false;
+        transitionTo(STATES.IDLE);
     }
-
-    return !handDetected && now - idleStartTime >= IDLE_BEFORE_DWELL;
 }
 
 /**
- * sets dwell timer and updates dwell progress
+ * Helper function that handles idle timer if no hand was detected <3s
+ * - switch to menu mode if hand was detected
+ * - switch to dwell mode if no hand was detected >3s
+ * @param handDetected
  * @param now
  */
-export function updateDwell(now) {
-    if (dwellStartTime === null) {      // if no dwell timer is running, set a new one
+function updateIdleState(handDetected, now) {
+    if (handDetected) {
+        idleStartTime = null;
+        transitionTo(STATES.MENU);
+        return;
+    }
+
+    if (!idleStartTime) {
+        idleStartTime = now;
+        return;
+    }
+
+    if (now - idleStartTime >= IDLE_BEFORE_DWELL) {
         dwellStartTime = now;
+        transitionTo(STATES.DWELL);
+    }
+}
+
+/**
+ * Helper function that handles dwell timer if no hand was detected >3s
+ * - switch to menu mode if hand was detected
+ * - draw dwell ring
+ * - switch to activation mode if no hand was detected again >3s
+ * @param handDetected
+ * @param now
+ */
+function updateDwellState(handDetected, now) {
+    if (handDetected) {
+        dwellStartTime = null;
+        transitionTo(STATES.MENU);
+        return;
+    }
+
+    if (!dwellStartTime) {
+        dwellStartTime = now;
+        return;
     }
 
     const elapsed = now - dwellStartTime;
     dwellProgress = Math.min(elapsed / DWELL_DURATION, 1);
+    drawDwellRing()
+
+    if (dwellProgress >= 1) {
+        dwellStartTime = null;
+        transitionTo(STATES.ACTIVATION);
+    }
+}
+
+/**
+ * Handles state transition
+ * @param newState
+ */
+function transitionTo(newState) {
+    currentState = newState;
+    dwellProgress = 0;
+}
+
+/**
+ * exports current state
+ * @returns {string}
+ */
+export function getCurrentState() {
+    return currentState;
 }
 
 /**
@@ -154,10 +199,6 @@ export function drawDwellRing() {
     ctx.beginPath();
     ctx.arc(x, y, radius, startAngle, endAngle);
     ctx.stroke();
-}
-
-export function setMenuUnlocked(value){
-    menuUnlocked = value;
 }
 
 /**

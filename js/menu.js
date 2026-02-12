@@ -1,4 +1,4 @@
-import { dwellProgress } from "./timings.js";
+import {getCurrentState, STATES} from "./timings.js";
 import { ctx } from "./main.js";
 import { getCursorDistance, getCursorAngle } from "./cursor.js";
 import { handlePreview, hideSlider, openSelectedSlider, sliderState, uiMode } from "./slider.js";
@@ -234,7 +234,7 @@ function setMenuGlobalAlpha() {
     if (uiMode.current === "slider") {  // always fade menu if slider is active
         ctx.globalAlpha = 0.25
     } else {
-        ctx.globalAlpha = dwellProgress > 0 ? 0.25 : 1 ;
+        ctx.globalAlpha = getCurrentState() === STATES.DWELL ? 0.25 : 1 ;
     }
 }
 

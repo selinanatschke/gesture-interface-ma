@@ -8,7 +8,7 @@ import {
     menuState
 } from "./menu.js";
 import { isPinched } from "./gestures.js";
-import { dwellProgress } from "./timings.js";
+import { getCurrentState, STATES } from "./timings.js";
 import { sendMessage } from "./websocket.js";
 import { sliderValueStorage } from "./data.js";
 
@@ -83,7 +83,7 @@ export function openSelectedSlider(selectedSliderType){
 export function drawSliderCanvas() {
     if (!sliderConfig || !sliderState.visible) return;
 
-    if (sliderState.preview || dwellProgress > 0) ctx.globalAlpha = 0.5;
+    if (sliderState.preview || getCurrentState() === STATES.DWELL) ctx.globalAlpha = 0.5;
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
