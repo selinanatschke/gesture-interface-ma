@@ -250,32 +250,6 @@ function setMenuGlobalAlpha() {
     }
 }
 
-/**
- * Helper function that sums up cases in which main segment should be highlighted, these cases are:
- * - normal hover
- * - if main selected and the cursor is in the submenu that was opened by the selected main item
- * - if the user is interacting with the slider, then the main menu item that opened the slider should stay highlighted
- * @param i
- * @returns {boolean|*}
- */
-function isMainSegmentHighlighted(i) {
-    const activeMainSegment = interactionState.levels[0].hover;
-    const selectedMainSegment = interactionState.levels[0].selected;
-
-    // if main segment is selected, check if it has subItems
-    const selectedItem = menu.items[selectedMainSegment];
-    const hasSubItems = selectedItem?.type === "menu";
-
-    // check if cursor is in submenuRing
-    const cursorInSubMenu =
-        stateItemIsSet(interactionState.levels[0].selected) && (hasSubItems && isCursorInSubMenuRing()); // calculate if cursor is in submenu
-
-    return (
-        i === activeMainSegment                                   // normal hover
-        || (cursorInSubMenu && i === interactionState.levels[0].selected)   // cursor in submenu (+ submenu exists)
-    );
-}
-
 /** Helper function to draw the label in a segment for the main menu
  *
  * @param item
