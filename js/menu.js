@@ -395,12 +395,17 @@ function doActionOrHandleNavigation(selectedItem){
     }
 
     if(selectedItem.type === "button"){
-        sendMessage({
-            action: "pressed",
-            type: "button",
-            target: "presentation",
-            value: sliderValueStorage.isPlaying ? "pause" : "play"
-        })
+        if(selectedItem.target === "presentation"){
+            sendMessage({
+                action: "pressed",
+                type: "button",
+                target: "presentation",
+                value: sliderValueStorage.isPlaying ? "pause" : "play"
+            })
+        } else {
+            console.warn("unknown button action")
+        }
+
     }
 
     // hide slider for all actions except slider

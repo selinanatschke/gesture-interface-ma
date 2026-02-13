@@ -65,16 +65,16 @@
         {
           "id": 31,
           "label": "C1",
-          "type": "placeholder",
+          "type": "button",
           "icon": "C1",
-          "target": "text"
+          "target": "placeholder"
         },
         {
           "id": 32,
           "label": "C2",
-          "type": "placeholder",
+          "type": "button",
           "icon": "C2",
-          "target": "number"
+          "target": "placeholder"
         }
       ]
     }

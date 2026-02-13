@@ -32,7 +32,7 @@ Each item in items or children must follow this structure:
 {
     "id": "number",
     "label": "string",
-    "type": "menu | slider | button | placeholder",
+    "type": "menu | slider | button",
     "icon": "name of .png file (string)",
     "target": "string (optional)",
     "children": [ MenuItem ] (optional)
@@ -83,7 +83,7 @@ Example:
 ```
 
 - The target value must correspond to a valid WebSocket target, such as:
-  - volume | brightness | vibration | presentation
+  - volume | brightness | vibration | presentation | placeholder
 
 #### 2. Button Items
 - If a menu item has a button action:
@@ -150,12 +150,12 @@ Complete Example
     {
       "id": 2,
       "label": "Präsentationssteuerung",
-      "type": "slider",
+      "type": "menu",
       "icon": "presentation",
       "children": [
         {
           "id": 21,
-          "label": "Präsentationssteuerung",
+          "label": "Präsentationssteuerung Videodauer",
           "type": "slider",
           "icon": "presentation-length",
           "target": "presentation"
@@ -164,7 +164,10 @@ Complete Example
           "id": 22,
           "label": "Play/Pause",
           "type": "button",
-          "icon": "play",
+          "icon": {
+            "default": "play",
+            "active": "pause"
+          },
           "target": "presentation"
         }
       ]
@@ -178,19 +181,20 @@ Complete Example
         {
           "id": 31,
           "label": "C1",
-          "type": "placeholder",
+          "type": "button",
           "icon": "C1",
-          "target": "text"
+          "target": "placeholder"
         },
         {
           "id": 32,
           "label": "C2",
-          "type": "placeholder",
+          "type": "button",
           "icon": "C2",
-          "target": "number"
+          "target": "placeholder"
         }
       ]
     }
   ]
 }
+
 ```
