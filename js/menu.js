@@ -11,6 +11,8 @@ import {
     UI_STATES
 } from "./slider.js";
 import { isGrabbing } from "./gestures.js";
+import { sendMessage } from "./websocket.js";
+import {sliderValueStorage} from "./data.js";
 
 export let menu = null; // will be received from server
 
@@ -24,7 +26,7 @@ export function setMenu(newMenu) {
     );
 }
 
-export const menuState = {
+export const menuPosition = {
     x: 0,
     y: 0
 };
@@ -139,10 +141,12 @@ export function updateLevelInteractionState(now, level) {
     // if progress is finished and the action was not already triggered -> save new selected item + do action/navigate + reset previously selected slider
     if (progressFinished && !interactionState.levels[level].dwellTriggered) {
         interactionState.levels[level].dwellTriggered = true;
-        interactionState.levels[level].selected = interactionState.levels[level].hover
         sliderState.selectedSliderType = null;
 
         const item = getHoveredItem(level);
+        if(item.type !== "button"){     // this should never be selected if a button was hit, since the user should be able to hit it multiple times
+            interactionState.levels[level].selected = interactionState.levels[level].hover
+        }
         doActionOrHandleNavigation(item);
     }
 }
@@ -212,7 +216,7 @@ export function drawMarkingMenu() {
         const isSelected = i === interactionState.levels[0].selected;
 
         drawRingSegment(startAngle, endAngle, 0, menu.radius, isSelected, isHighlighted);
-        drawLabel(menu.items[i].label, startAngle, endAngle, menu.radius*0.6);
+        drawLabel(menu.items[i], startAngle, endAngle, menu.radius*0.6);
 
         // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
         const breakHoverCondition = interactionState.levels[0].dwellProgress === 0 || i !== interactionState.levels[0].hover || i === interactionState.levels[0].selected;
@@ -274,18 +278,18 @@ function isMainSegmentHighlighted(i) {
 
 /** Helper function to draw the label in a segment for the main menu
  *
- * @param label
+ * @param item
  * @param startAngle
  * @param endAngle
  * @param radius
  */
-function drawLabel(label, startAngle, endAngle, radius) {
+function drawLabel(item, startAngle, endAngle, radius) {
     const midAngle = (startAngle + endAngle) / 2;
-    let labelX = menuState.x + Math.cos(midAngle) * radius;
-    let labelY = menuState.y + Math.sin(midAngle) * radius;
+    let labelX = menuPosition.x + Math.cos(midAngle) * radius;
+    let labelY = menuPosition.y + Math.sin(midAngle) * radius;
 
-    const icon = getIconForLabel(label);
-    const size = label === "H, V, L einstellen" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
+    const icon = getIconForItem(item);
+    const size = item.icon === "hvl-settings" ?  165 : 48; // Icon size => exception: bigger icon size TODO: make this more efficient
     if (icon) {
         ctx.drawImage(
             icon,
@@ -299,7 +303,7 @@ function drawLabel(label, startAngle, endAngle, radius) {
         ctx.font = "32px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(label, labelX, labelY);
+        ctx.fillText(item.label, labelX, labelY);
     }
 }
 
@@ -321,10 +325,10 @@ function drawHoverFill(condition, startAngle, endAngle, innerRadius, outerRadius
 
     // draw dwell fill only for hovered segment (angle based)
     ctx.beginPath();
-    ctx.moveTo(menuState.x, menuState.y);
+    ctx.moveTo(menuPosition.x, menuPosition.y);
     const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.levels[level].dwellProgress;
-    ctx.arc(menuState.x, menuState.y, outerRadius, startAngle, fillEndAngle);
-    ctx.arc(menuState.x, menuState.y, innerRadius, fillEndAngle, startAngle, true);
+    ctx.arc(menuPosition.x, menuPosition.y, outerRadius, startAngle, fillEndAngle);
+    ctx.arc(menuPosition.x, menuPosition.y, innerRadius, fillEndAngle, startAngle, true);
     ctx.closePath();
     ctx.fillStyle = MENU_COLORS.dwell;
     ctx.fill();
@@ -416,6 +420,15 @@ function doActionOrHandleNavigation(selectedItem){
         return;
     }
 
+    if(selectedItem.type === "button"){
+        sendMessage({
+            action: "pressed",
+            type: "button",
+            target: "presentation",
+            value: sliderValueStorage.isPlaying ? "pause" : "play"
+        })
+    }
+
     // hide slider for all actions except slider
     hideSlider();
 }
@@ -486,7 +499,7 @@ function drawSubMenu(level) {
         const isSelected = i === interactionState.levels[level].selected;
         const isHighlighted = isSegmentHighlighted(level, i);
         drawRingSegment(startAngleSegment, endAngleSegment, innerRadius, outerRadius, isSelected, isHighlighted);
-        drawLabel(items[i].label, startAngleSegment, endAngleSegment, (innerRadius + outerRadius) / 2);
+        drawLabel(items[i], startAngleSegment, endAngleSegment, (innerRadius + outerRadius) / 2);
 
         const state = interactionState.levels[level];
 
@@ -508,8 +521,8 @@ function drawSubMenu(level) {
  */
 function drawRingSegment(startAngle, endAngle, innerRadius, outerRadius, isSelected, isHighlighted) {
     ctx.beginPath();
-    ctx.arc(menuState.x, menuState.y, outerRadius, startAngle, endAngle);                    // outer arc
-    ctx.arc(menuState.x, menuState.y, innerRadius, endAngle, startAngle, true);   // inner arc
+    ctx.arc(menuPosition.x, menuPosition.y, outerRadius, startAngle, endAngle);                    // outer arc
+    ctx.arc(menuPosition.x, menuPosition.y, innerRadius, endAngle, startAngle, true);   // inner arc
     ctx.closePath();
     ctx.stroke();
 
@@ -543,39 +556,57 @@ function stateItemIsNotSet(stateItem){
 }
 
 /**
- * Loads an icon by label name (cached)
- * @param {string} label
- * @returns {HTMLImageElement}
+ * Loads an icon by icon name from menu file
+ * @param item
+ * @returns {HTMLImageElement|null}
  */
-function getIconForLabel(label) {
-    if (!label) return null;
+function getIconForItem(item){
+    if(!item?.icon) return null;
+
+    let iconName;
+
+    // stateful icon (e.g. Play/Pause)
+    if(typeof item.icon === "object"){
+        const isActive = sliderValueStorage.isPlaying && item.type === "button" && item.target === "presentation"
+        iconName = isActive ? item.icon.active : item.icon.default;
+    }
+    // static icon
+    else {
+        iconName = item.icon;
+    }
+
+    return loadIcon(iconName);
+}
+
+function loadIcon(iconName){
+    if (!iconName) return null;
 
     // if icon is already known (loaded or error)
-    const cached = iconCache[label];
+    const cached = iconCache[iconName];
     if (cached) {
         if (cached.loaded) return cached.img;
         if (cached.failed) return null;
-        return null; // noch am Laden
+        return null;
     }
 
     const img = new Image();
 
-    iconCache[label] = {
+    iconCache[iconName] = {
         img,
         loaded: false,
         failed: false
     };
 
     img.onload = () => {
-        iconCache[label].loaded = true;
+        iconCache[iconName].loaded = true;
     };
 
     img.onerror = () => {
-        iconCache[label].failed = true;
-        console.warn("ICON NOT FOUND:", label);
+        iconCache[iconName].failed = true;
+        console.warn("ICON NOT FOUND:", iconName);
     };
 
-    img.src = `./images/label-icons/${label}.png`;
+    img.src = `./images/label-icons/${iconName}.png`;
 
     return null;
 }

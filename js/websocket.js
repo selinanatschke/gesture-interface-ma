@@ -1,9 +1,15 @@
-import {handleDataUpdate, handleInitialData} from "./data.js";
+import {handleDataUpdate, handleInitialData, sliderValueStorage} from "./data.js";
 import {syncSliderFromData} from "./slider.js";
 
 const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
 let offlineMode = false;    // if no server is there to connect, use dummmy data
-let dummyInterval = null;
+let offlineInterval = null;
+
+let offlinePlayback = {
+    duration: 750,
+    currentTime: 0,
+    playing: false
+};
 
 socket.onopen = () => {
     console.log("WebSocket connected");
@@ -50,8 +56,8 @@ function handleOfflineMessage(msg) {
     if (msg.action === "update" && msg.type === "slider") {
 
         if (msg.target === "presentation") {
-            const durationInSeconds = 750;
-            const seconds = msg.value * durationInSeconds / 60;
+            const seconds = msg.value * offlinePlayback.duration / 60;
+            offlinePlayback.currentTime = seconds;
 
             handleDataUpdate({
                 target: "presentation",
@@ -61,11 +67,21 @@ function handleOfflineMessage(msg) {
             handleDataUpdate(msg);
         }
         syncSliderFromData(msg.target);
-    } else if (msg.action === "pressed" && msg.type === "button" && msg.target === "presentation"){
+        return
+    }
 
-        // simple fake play/pause TODO needs testing
-        if (msg.action === "play") {
-            startDummyPlayback();
+    if (msg.action === "pressed" && msg.type === "button" && msg.target === "presentation"){
+
+        // toggle state
+        offlinePlayback.playing = !offlinePlayback.playing;
+
+        // simulate server confirmation
+        sliderValueStorage.isPlaying = offlinePlayback.playing;
+
+        if (offlinePlayback.playing) {
+            startOfflinePlayback();
+        } else {
+            stopOfflinePlayback();
         }
     }
 }
@@ -74,6 +90,10 @@ function handleOfflineMessage(msg) {
  * initializes dummy offline data
  */
 async function initOfflineData() {
+    offlinePlayback.currentTime = 0;
+    offlinePlayback.playing = false;
+    sliderValueStorage.isPlaying = false;
+
     handleInitialData(750);
 
     const response = await fetch("./offlineMenu.json");
@@ -89,14 +109,35 @@ async function initOfflineData() {
 }
 
 /**
- * Simulates play/pause in offline mode (TODO test)
+ * Simulates play/pause in offline mode
  */
-function startDummyPlayback() {
-    if (dummyInterval) return;
+function startOfflinePlayback() {
+    if (offlineInterval) return;
 
-    dummyInterval = setInterval(() => {
-        handleInitialData(750);
+    offlineInterval = setInterval(() => {
+
+        if (!offlinePlayback.playing) return;
+
+        offlinePlayback.currentTime += 0.033;
+
+        if (offlinePlayback.currentTime >= offlinePlayback.duration) {
+            offlinePlayback.currentTime = offlinePlayback.duration;
+            offlinePlayback.playing = false;
+            stopOfflinePlayback();
+        }
+
+        handleDataUpdate({
+            target: "presentation",
+            value: offlinePlayback.currentTime
+        });
     }, 33);
+}
+
+function stopOfflinePlayback() {
+    if (offlineInterval) {
+        clearInterval(offlineInterval);
+        offlineInterval = null;
+    }
 }
 
 /**
@@ -131,7 +172,7 @@ function handleIncomingMessage(msg) {
     }
 
     if (msg.action === "pressed" && msg.type === "button") {
-        // optional handling
+        sliderValueStorage.isPlaying = msg.value === "play";
     }
 }
 

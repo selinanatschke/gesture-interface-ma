@@ -10,7 +10,7 @@ import {
     updateLevelInteractionState,
     interactionState,
     UI_SCALE,
-    menuState,
+    menuPosition,
     getHoveredSegmentForLevel,
     menu
 } from "./menu.js";
@@ -51,16 +51,16 @@ window.addEventListener("keydown", (e) => {
 
         // move menu with arrow keys
         case "ArrowLeft":
-            menuState.x -= MOVE_STEP;
+            menuPosition.x -= MOVE_STEP;
             break;
         case "ArrowRight":
-            menuState.x += MOVE_STEP;
+            menuPosition.x += MOVE_STEP;
             break;
         case "ArrowUp":
-            menuState.y -= MOVE_STEP;
+            menuPosition.y -= MOVE_STEP;
             break;
         case "ArrowDown":
-            menuState.y += MOVE_STEP;
+            menuPosition.y += MOVE_STEP;
             break;
 
         // increase/decrease gesture thresholds
@@ -109,8 +109,8 @@ function resize() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    menuState.x = canvas.width / 2;
-    menuState.y = canvas.height / 2;
+    menuPosition.x = canvas.width / 2;
+    menuPosition.y = canvas.height / 2;
 }
 window.addEventListener("resize", resize);
 resize();

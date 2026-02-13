@@ -30,8 +30,10 @@ Each item in items or children must follow this structure:
 
 ```json
 {
+    "id": "number",
     "label": "string",
     "type": "menu | slider | button | placeholder",
+    "icon": "name of .png file (string)",
     "target": "string (optional)",
     "children": [ MenuItem ] (optional)
 }
@@ -47,13 +49,17 @@ Each item in items or children must follow this structure:
 Example:
 ```json
 {
+    "id": 0,
     "label": "H, L, V einstellen",
     "type": "menu",
+    "icon": "H, L, V einstellen",
     "children": [
         {
+        "id": 0,
         "label": "Volume",
         "type": "slider",
-        "target": "volume"
+         "icon": "volume",
+         "target": "volume"
         }
     ] 
 }
@@ -68,8 +74,10 @@ Example:
 Example:
 ```json
 {
+    "id": 0,
     "label": "Brightness",
     "type": "slider",
+    "icon": "brightness",
     "target": "brightness"
 }
 ```
@@ -77,6 +85,27 @@ Example:
 - The target value must correspond to a valid WebSocket target, such as:
   - volume | brightness | vibration | presentation
 
+#### 2. Button Items
+- If a menu item has a button action:
+  - type must be "button"
+  - target must match a valid system target
+  - children must NOT be defined
+  - in case that the action sets a flag, the icon can be used to determine its state
+    - in this case the icon has two states: default and action which are switched to give the user feedback
+
+Example:
+```json
+{
+    "id": 0,
+    "label": "Play/Pause",
+    "type": "button",
+    "icon": {
+      "default": "play",
+      "active": "pause"
+    },
+    "target": "presentation"
+}
+```
 
 ### Structural Constraints
 - A menu item must not contain both children and target. 
@@ -86,51 +115,82 @@ Example:
 Complete Example
 ```json
 {
-    "radius": 200,
-    "subRadius": 100,
-    "items": [
+  "radius": 200,
+  "subRadius": 100,
+  "items": [
+    {
+      "id": 1,
+      "label": "H, V, L einstellen",
+      "type": "menu",
+      "icon": "hvl-settings",
+      "children": [
         {
-            "label": "H, L, V Settings",
-            "type": "menu",
-            "children": [
-                {
-                    "label": "Volume",
-                    "type": "slider",
-                    "target": "volume"
-                },
-                {
-                    "label": "Brightness",
-                    "type": "slider",
-                    "target": "brightness"
-                },
-                {
-                    "label": "Vibration",
-                    "type": "slider",
-                    "target": "vibration"
-                }
-            ]
+          "id": 11,
+          "label": "Lautstärke",
+          "type": "slider",
+          "icon": "volume",
+          "target": "volume"
         },
         {
-            "label": "Presentation",
-            "type": "slider",
-            "target": "presentation"
+          "id": 12,
+          "label": "Helligkeit",
+          "type": "slider",
+          "icon": "brightness",
+          "target": "brightness"
         },
         {
-            "label": "C",
-            "type": "menu",
-            "children": [
-                {
-                    "label": "C1",
-                    "type": "placeholder",
-                    "target": "text"
-                },
-                {
-                    "label": "C2",
-                    "type": "placeholder",
-                    "target": "number"
-                }
-            ]
+          "id": 13,
+          "label": "Vibration",
+          "type": "slider",
+          "icon": "vibration",
+          "target": "vibration"
         }
-    ] 
+      ]
+    },
+    {
+      "id": 2,
+      "label": "Präsentationssteuerung",
+      "type": "slider",
+      "icon": "presentation",
+      "children": [
+        {
+          "id": 21,
+          "label": "Präsentationssteuerung",
+          "type": "slider",
+          "icon": "presentation-length",
+          "target": "presentation"
+        },
+        {
+          "id": 22,
+          "label": "Play/Pause",
+          "type": "button",
+          "icon": "play",
+          "target": "presentation"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "label": "C",
+      "type": "menu",
+      "icon": "C",
+      "children": [
+        {
+          "id": 31,
+          "label": "C1",
+          "type": "placeholder",
+          "icon": "C1",
+          "target": "text"
+        },
+        {
+          "id": 32,
+          "label": "C2",
+          "type": "placeholder",
+          "icon": "C2",
+          "target": "number"
+        }
+      ]
+    }
+  ]
 }
 ```

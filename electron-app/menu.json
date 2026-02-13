@@ -3,43 +3,77 @@
   "subRadius": 100,
   "items": [
     {
+      "id": 1,
       "label": "H, V, L einstellen",
       "type": "menu",
+      "icon": "hvl-settings",
       "children": [
         {
+          "id": 11,
           "label": "Lautstärke",
           "type": "slider",
+          "icon": "volume",
           "target": "volume"
         },
         {
+          "id": 12,
           "label": "Helligkeit",
           "type": "slider",
+          "icon": "brightness",
           "target": "brightness"
         },
         {
+          "id": 13,
           "label": "Vibration",
           "type": "slider",
+          "icon": "vibration",
           "target": "vibration"
         }
       ]
     },
     {
+      "id": 2,
       "label": "Präsentationssteuerung",
-      "type": "slider",
-      "target": "presentation"
-    },
-    {
-      "label": "C",
       "type": "menu",
+      "icon": "presentation",
       "children": [
         {
+          "id": 21,
+          "label": "Präsentationssteuerung Videodauer",
+          "type": "slider",
+          "icon": "presentation-length",
+          "target": "presentation"
+        },
+        {
+          "id": 22,
+          "label": "Play/Pause",
+          "type": "button",
+          "icon": {
+            "default": "play",
+            "active": "pause"
+          },
+          "target": "presentation"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "label": "C",
+      "type": "menu",
+      "icon": "C",
+      "children": [
+        {
+          "id": 31,
           "label": "C1",
           "type": "placeholder",
+          "icon": "C1",
           "target": "text"
         },
         {
+          "id": 32,
           "label": "C2",
           "type": "placeholder",
+          "icon": "C2",
           "target": "number"
         }
       ]

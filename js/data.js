@@ -6,7 +6,8 @@ export const sliderValueStorage = {
     currentLength: 0,
     volume: 0,
     brightness: 0,
-    vibration: 0
+    vibration: 0,
+    isPlaying: false
 };
 
 /**

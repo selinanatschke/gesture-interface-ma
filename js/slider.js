@@ -5,7 +5,7 @@ import {
     getSliderPlacementForMainItem,
     interactionState,
     menu,
-    menuState
+    menuPosition
 } from "./menu.js";
 import { isPinched } from "./gestures.js";
 import { getCurrentState, STATES } from "./timings.js";
@@ -318,23 +318,23 @@ export function showSlider(type) {
     // calculate position relative to the menu
     switch (sliderConfig.position) {
         case "right":
-            sliderX = menuState.x + outerMenuRadius  + SLIDER_GAP;
-            sliderY = menuState.y - sliderHeight / 2;
+            sliderX = menuPosition.x + outerMenuRadius  + SLIDER_GAP;
+            sliderY = menuPosition.y - sliderHeight / 2;
             break;
 
         case "left":
-            sliderX = menuState.x - outerMenuRadius  - sliderWidth - SLIDER_GAP;
-            sliderY = menuState.y - sliderHeight / 2;
+            sliderX = menuPosition.x - outerMenuRadius  - sliderWidth - SLIDER_GAP;
+            sliderY = menuPosition.y - sliderHeight / 2;
             break;
 
         case "bottom":
-            sliderX = menuState.x - sliderWidth / 2;
-            sliderY = menuState.y + outerMenuRadius + SLIDER_GAP;
+            sliderX = menuPosition.x - sliderWidth / 2;
+            sliderY = menuPosition.y + outerMenuRadius + SLIDER_GAP;
             break;
 
         case "top":
-            sliderX = menuState.x - sliderWidth / 2;
-            sliderY = menuState.y - outerMenuRadius  - sliderHeight - SLIDER_GAP - 80;
+            sliderX = menuPosition.x - sliderWidth / 2;
+            sliderY = menuPosition.y - outerMenuRadius  - sliderHeight - SLIDER_GAP - 80;
             break;
     }
     syncSliderFromData(type);

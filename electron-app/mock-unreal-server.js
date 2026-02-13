@@ -137,16 +137,17 @@ function handleSliderUpdate(msg, ws) {
  * helper method that handles play/pause for video and also sends confirmation message back to UI ("These values were successfully sent by UI")
  * @param msg
  * @param ws
- * TODO needs testing
  */
 function handlePresentationCommand(msg, ws) {
     if (msg.value === "play") videoState.playing = true;
     if (msg.value === "pause") videoState.playing = false;
 
-    ws.send(JSON.stringify({
-        action: "update",
-        type: "slider",
-        target: "presentation",
-        value: videoState.currentTime
-    }));
+    if(msg.target === "presentation"){
+        ws.send(JSON.stringify({
+            action: "pressed",
+            type: "button",
+            target: "presentation",
+            value: msg.value
+        }));
+    }
 }

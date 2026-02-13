@@ -1,5 +1,5 @@
 import { ctx } from "./main.js";
-import {menuState} from "./menu.js"
+import {menuPosition} from "./menu.js"
 import {getCurrentUiState, UI_STATES} from "./slider.js";
 
 /** cursor element that holds the position of the cursor
@@ -57,8 +57,8 @@ function drawCursor(x, y) {
  * @returns {number}
  */
 export function getCursorDistance() {
-    const dx = cursor.x - menuState.x;
-    const dy = cursor.y - menuState.y;
+    const dx = cursor.x - menuPosition.x;
+    const dy = cursor.y - menuPosition.y;
     return Math.sqrt(dx * dx + dy * dy);
 }
 
@@ -67,8 +67,8 @@ export function getCursorDistance() {
  * @returns {number}
  */
 export function getCursorAngle() {
-    const dx = cursor.x - menuState.x;
-    const dy = cursor.y - menuState.y;
+    const dx = cursor.x - menuPosition.x;
+    const dy = cursor.y - menuPosition.y;
 
     let angle = Math.atan2(dy, dx); // -PI .. PI
 
@@ -90,6 +90,6 @@ export function setCursorOffsetToMenuCenter(results) {
     const absoluteX = (1 - palm.x) * canvas.width;
     const absoluteY = palm.y * canvas.height;
 
-    cursorOffset.x = menuState.x - absoluteX;
-    cursorOffset.y = menuState.y - absoluteY;
+    cursorOffset.x = menuPosition.x - absoluteX;
+    cursorOffset.y = menuPosition.y - absoluteY;
 }
