@@ -44,49 +44,61 @@ window.addEventListener("keydown", (e) => {
         // scale menu with + and -
         case "+":
             resizeMenu(UI_SCALE.radiusStep);
+            localStorage.setItem("menuRadius", menu?.radius);
             break;
         case "-":
             resizeMenu(-UI_SCALE.radiusStep);
+            localStorage.setItem("menuRadius", menu?.radius);
             break;
 
         // move menu with arrow keys
         case "ArrowLeft":
             menuPosition.x -= MOVE_STEP;
+            localStorage.setItem("menuPosX", String(menuPosition.x));
             break;
         case "ArrowRight":
             menuPosition.x += MOVE_STEP;
+            localStorage.setItem("menuPosX", String(menuPosition.x));
             break;
         case "ArrowUp":
             menuPosition.y -= MOVE_STEP;
+            localStorage.setItem("menuPosY", String(menuPosition.y));
             break;
         case "ArrowDown":
             menuPosition.y += MOVE_STEP;
+            localStorage.setItem("menuPosY", String(menuPosition.y));
             break;
 
         // increase/decrease gesture thresholds
         case "p":
             gestureThresholds.pinchThreshold += 0.1;
             console.log("pinchThreshold", gestureThresholds.pinchThreshold)
+            localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
             break;
         case "h":
             gestureThresholds.pinchThreshold -= 0.1;
             console.log("pinchThreshold", gestureThresholds.pinchThreshold)
+            localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
             break;
         case "g":
             gestureThresholds.grabThreshold += 0.1;
             console.log("grabThreshold", gestureThresholds.grabThreshold)
+            localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
             break;
         case "b":
             gestureThresholds.grabThreshold -= 0.1;
             console.log("grabThreshold", gestureThresholds.grabThreshold)
+            localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
             break;
         case "o":
             gestureThresholds.openPalmThreshold += 0.1;
             console.log("openPalmThreshold", gestureThresholds.openPalmThreshold)
+            localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
             break;
         case "m":
             gestureThresholds.openPalmThreshold -= 0.1;
             console.log("openPalmThreshold", gestureThresholds.openPalmThreshold)
+            localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
             break;
     }
 });
@@ -115,6 +127,20 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
+// Load persisted values from local storage
+menuPosition.x = Number(localStorage.getItem("menuPosX")) || menuPosition.x;
+menuPosition.y = Number(localStorage.getItem("menuPosY")) || menuPosition.y;
+
+gestureThresholds.pinchThreshold =
+    Number(localStorage.getItem("pinchThreshold")) || gestureThresholds.pinchThreshold;
+
+gestureThresholds.grabThreshold =
+    Number(localStorage.getItem("grabThreshold")) || gestureThresholds.grabThreshold;
+
+gestureThresholds.openPalmThreshold =
+    Number(localStorage.getItem("openPalmThreshold")) || gestureThresholds.openPalmThreshold;
+
+
 // instiate mediapipe hand
 const hands = new Hands({
     locateFile: (file) => `./lib/mediapipe/hands/${file}`,
@@ -133,6 +159,7 @@ hands.onResults((results) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!menu || !menu.items) return;   // necessary if menu data was not received yet
+    menu.radius = localStorage.getItem("menuRadius") || menu.radius;
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;
