@@ -66,25 +66,29 @@ wss.on("connection", (ws) => {
         action: "initial",
         type: "slider",
         target: "presentation",
-        value: videoState.duration
+        value: videoState.duration,
+        id: 21
     }));
     ws.send(JSON.stringify({
         action: "update",
         type: "slider",
         target: "volume",
-        value: uiState.volume
+        value: uiState.volume,
+        id: 11
     }));
     ws.send(JSON.stringify({
         action: "update",
         type: "slider",
         target: "brightness",
-        value: uiState.brightness
+        value: uiState.brightness,
+        id: 12
     }));
     ws.send(JSON.stringify({
         action: "update",
         type: "slider",
         target: "vibration",
-        value: uiState.vibration
+        value: uiState.vibration,
+        id: 13
     }));
 
     /**
@@ -102,7 +106,8 @@ wss.on("connection", (ws) => {
                 action: "update",
                 type: "slider",
                 target: "presentation",
-                value: videoState.currentTime
+                value: videoState.currentTime,
+                id: 21
             }));
         }
     }, 33);
@@ -129,7 +134,8 @@ function handleSliderUpdate(msg, ws) {
         action: "update",
         type: "slider",
         target: msg.target,
-        value: returnValue
+        value: returnValue,
+        id: msg.id
     }));
 }
 
@@ -147,7 +153,8 @@ function handlePresentationCommand(msg, ws) {
             action: "pressed",
             type: "button",
             target: "presentation",
-            value: msg.value
+            value: msg.value,
+            id: msg.id
         }));
     }
 }

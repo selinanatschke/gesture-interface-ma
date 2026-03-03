@@ -142,6 +142,7 @@ export function updateLevelInteractionState(now, level) {
     if (progressFinished && !interactionState.levels[level].dwellTriggered) {
         interactionState.levels[level].dwellTriggered = true;
         sliderState.selectedSliderType = null;
+        sliderState.selectedSliderId = null;
 
         const item = getHoveredItem(level);
         if(item.type !== "button"){     // this should never be selected if a button was hit, since the user should be able to hit it multiple times
@@ -390,7 +391,7 @@ function doActionOrHandleNavigation(selectedItem){
     // if element opens slider
     if (selectedItem.type === "slider") {
         setCurrentUiState(UI_STATES.SLIDER)
-        openSelectedSlider(selectedItem.target);
+        openSelectedSlider(selectedItem.target, selectedItem.id);
         return;
     }
 
@@ -400,7 +401,8 @@ function doActionOrHandleNavigation(selectedItem){
                 action: "pressed",
                 type: "button",
                 target: "presentation",
-                value: sliderValueStorage.isPlaying ? "pause" : "play"
+                value: sliderValueStorage.isPlaying ? "pause" : "play",
+                id: selectedItem["id"]
             })
         } else {
             console.warn("unknown button action")

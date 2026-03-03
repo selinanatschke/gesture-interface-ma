@@ -9,13 +9,15 @@
 
 #### General structure
 Sent from UI to UE (and back as confirmation) when a slider value changes or the user interacts with UI components to pause/play video.
+The id always represents the id of the menu entry which "caused" the action. 
 
 ```json
 {
   "action": "update | pressed | initial",
   "type": "slider | button | menu",
   "target": "volume | brightness | vibration | presentation",
-  "value": "0.0 - 1.0 | play | pause | number in s"
+  "value": "0.0 - 1.0 | play | pause | number in s",
+  "id": "number"
 }
 ```
 
@@ -26,7 +28,8 @@ Example for a slider update message: The user has changed the volume slider valu
   "action": "update",
   "type": "slider",
   "target": "volume",
-  "value": "0.35"
+  "value": "0.35",
+  "id": "1"
 }
 ```
 
@@ -36,7 +39,8 @@ Example for a slider update message: The user has changed the current time of th
   "action": "update",
   "type": "slider",
   "target": "presentation",
-  "value": "80"
+  "value": "80",
+  "id": "1"
 }
 ```
 
@@ -47,7 +51,8 @@ In this case ```value``` is stating the total length of the video (2:00min).
   "action": "initial",
   "type": "slider",
   "target": "presentation",
-  "value": "120"
+  "value": "120",
+  "id": "1"
 }
 ```
 
@@ -69,7 +74,8 @@ Since the value now is play, it means that this should set the video in a runnin
   "action": "pressed",
   "type": "button",
   "target": "presentation",
-  "value": "play"
+  "value": "play",
+  "id": "1"
 }
 ```
 

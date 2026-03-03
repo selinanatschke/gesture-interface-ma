@@ -3,11 +3,8 @@
  */
 export const sliderValueStorage = {
     videoLength: 0,
-    currentLength: 0,
-    volume: 0,
-    brightness: 0,
-    vibration: 0,
-    isPlaying: false
+    isPlaying: false,
+    actionItems: {} // { [id]: { target: string, value: number } }
 };
 
 /**
@@ -24,18 +21,18 @@ export function handleInitialData(totalVideoLength){
  * @param msg
  */
 export function handleDataUpdate(msg){
-    switch (msg.target){
-        case "volume":
-            sliderValueStorage.volume = msg.value;
-            break;
-        case "brightness":
-            sliderValueStorage.brightness = msg.value;
-            break;
-        case "vibration":
-            sliderValueStorage.vibration = msg.value;
-            break;
-        case "presentation":
-            sliderValueStorage.currentLength = msg.value;
-            break;
+    if (msg.target === "presentation") {
+        sliderValueStorage.currentLength = msg.value;
+        return;
     }
+
+    if (msg.id == null) {
+        console.warn("Slider update without id:", msg);
+        return;
+    }
+
+    sliderValueStorage.actionItems[msg.id] = {
+        target: msg.target,
+        value: msg.value
+    };
 }

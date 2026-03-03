@@ -2,6 +2,10 @@ import {handleDataUpdate, handleInitialData, sliderValueStorage} from "./data.js
 import {syncSliderFromData} from "./slider.js";
 import {getMenuDepth} from "./menu.js";
 
+/*
+Note: The offline data transfer only works for the offlineMenu.json structure!
+ */
+
 const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
 let offlineMode = false;    // if no server is there to connect, use dummmy data
 let offlineInterval = null;
@@ -52,7 +56,7 @@ export function sendMessage(message) {
  * @param msg
  */
 function handleOfflineMessage(msg) {
-    console.log("Offline mode message:", msg);
+    console.log("Sent offline mode message from UI:", msg);
 
     if (msg.action === "update" && msg.type === "slider") {
 
@@ -62,7 +66,8 @@ function handleOfflineMessage(msg) {
 
             handleDataUpdate({
                 target: "presentation",
-                value: seconds
+                value: seconds,
+                id: 21
             });
         } else {
             handleDataUpdate(msg);
@@ -104,9 +109,9 @@ async function initOfflineData() {
         type: "menu",
         value: menu
     });
-    handleDataUpdate({target: "volume", value: 0.5});
-    handleDataUpdate({target: "brightness", value: 0.7});
-    handleDataUpdate({target: "vibration", value: 0.2});
+    handleDataUpdate({target: "volume", value: 0.5, id: 11});
+    handleDataUpdate({target: "brightness", value: 0.7, id: 12});
+    handleDataUpdate({target: "vibration", value: 0.2, id: 13});
 }
 
 /**
@@ -129,7 +134,8 @@ function startOfflinePlayback() {
 
         handleDataUpdate({
             target: "presentation",
-            value: offlinePlayback.currentTime
+            value: offlinePlayback.currentTime,
+            id: 21
         });
     }, 33);
 }
@@ -171,7 +177,8 @@ function handleIncomingMessage(msg) {
     if (msg.action === "update" && msg.type === "slider") {
         handleDataUpdate({
             target: msg.target,
-            value: msg.value
+            value: msg.value,
+            id: msg.id
         });
 
         syncSliderFromData(msg.target);

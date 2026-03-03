@@ -43,6 +43,7 @@ export const sliderState = {
     visible: false,                 // determines whether slider is drawn or not (true if preview or active)
     previewOwner: null,
     selectedSliderType: null,
+    selectedSliderId: null
 };
 
 // positions for tracking movement while pinched
@@ -71,8 +72,9 @@ const SLIDER_META = {
     }
 };
 
-export function openSelectedSlider(selectedSliderType){
+export function openSelectedSlider(selectedSliderType, selectedSliderId){
     sliderState.selectedSliderType = selectedSliderType;
+    sliderState.selectedSliderId = selectedSliderId
     sliderState.visible = true;
     sliderState.previewOwner = null;
     setCurrentUiState(UI_STATES.SLIDER);
@@ -162,8 +164,8 @@ export function handlePreview(level){
                 ? { level: 0, index: interactionState.levels[0].hover }
                 : { level: 1, main: interactionState.levels[0].selected, sub: interactionState.levels[1].hover };
 
-        if (hoveredItem?.type === "slider" && !sliderState.preview) {
-            showSliderPreview(hoveredItem.target, owner);
+        if (hoveredItem?.type === "slider" && !sliderState.previewOwner) {
+            showSliderPreview(hoveredItem.target, owner, hoveredItem.id);
 
         }
     }
@@ -280,8 +282,9 @@ function formatMinutes(value) {
 /** Creates a sliderconfig that is used to determine which orientation the slider needs to have, which images are loaded and where to position it
  *
  * @param type
+ * @param id
  */
-export function showSlider(type) {
+export function showSlider(type, id) {
     const meta = SLIDER_META[type];
     if (!meta) {
         console.warn("Unknown slider type:", type);
@@ -289,7 +292,6 @@ export function showSlider(type) {
     }
 
     sliderState.visible = true;
-    sliderState.previewOwner = null;
 
     const placement = getSliderPlacementForMainItem(type);
 
@@ -337,27 +339,23 @@ export function showSlider(type) {
             sliderY = menuPosition.y - outerMenuRadius  - sliderHeight - SLIDER_GAP - 80;
             break;
     }
-    syncSliderFromData(type);
+    syncSliderFromData(type, id);
 }
 
 /** Copies values from data.js in sliderValue
  * @param type
+ * @param id
  */
-export function syncSliderFromData(type) {
-    switch (type) {
-        case "volume":
-            sliderValue = sliderValueStorage.volume;
-            break;
-        case "brightness":
-            sliderValue = sliderValueStorage.brightness;
-            break;
-        case "vibration":
-            sliderValue = sliderValueStorage.vibration;
-            break;
-        case "presentation":
-            sliderValue = sliderValueStorage.currentLength/sliderValueStorage.videoLength;
-            break;
+export function syncSliderFromData(type, id) {
+    if (type === "presentation") {
+        sliderValue = sliderValueStorage.currentLength/sliderValueStorage.videoLength;
+        return;
     }
+
+    const actionItem = sliderValueStorage.actionItems?.[id];
+    if (!actionItem || actionItem.target !== type) return;
+
+    sliderValue = actionItem.value;
 }
 
 /**
@@ -409,7 +407,8 @@ export function updateSliderValueFromHand(results) {
             action: "update",
             type: "slider",
             target: sliderConfig.type,
-            value: sliderValue
+            value: sliderValue,
+            id: sliderState.selectedSliderId
         });
 
         lastSliderSendTime = now;
@@ -423,6 +422,7 @@ export function hideSlider() {
     sliderState.previewOwner = null;
     sliderState.visible = false;
     sliderState.selectedSliderType = null;
+    sliderState.selectedSliderId = null;
     lastHandPositionX = null;
     lastHandPositionY = null;
 }
@@ -441,7 +441,7 @@ export function updateSlider(results) {
 
     // if an item with a slider action was already opened and no other slider preview is shown currently, draw slider
     if(sliderState.selectedSliderType && !sliderState.previewOwner && !sliderState.visible){
-        showSlider(sliderState.selectedSliderType);    // enables slider
+        showSlider(sliderState.selectedSliderType, sliderState.selectedSliderId);    // enables slider
     }
 }
 
@@ -449,11 +449,15 @@ export function updateSlider(results) {
  * Enables slider preview
  * @param type
  * @param owner
+ * @param id
  */
-export function showSliderPreview(type, owner) {
+export function showSliderPreview(type, owner, id) {
     if (!type) return;
 
-    showSlider(type);
+    sliderState.selectedSliderType = type;
+    sliderState.selectedSliderId = id;
+
+    showSlider(type, id);
     setCurrentUiState(UI_STATES.MENU)
     sliderState.previewOwner = owner
 }
@@ -469,22 +473,14 @@ function getSliderValue() {
         return sliderValue;
     }
 
-    switch (sliderConfig.type) {
-        case "volume":
-            return sliderValueStorage.volume;
-        case "brightness":
-            return sliderValueStorage.brightness;
-        case "vibration":
-            return sliderValueStorage.vibration;
-        case "presentation":
-            if (!sliderValueStorage.videoLength) {
-                return 0;
-            } else {
-                return sliderValueStorage.currentLength / sliderValueStorage.videoLength;
-            }
-        default:
-            return 0;
+    if (sliderConfig.type === "presentation") {
+        return sliderValueStorage.videoLength
+            ? sliderValueStorage.currentLength / sliderValueStorage.videoLength
+            : 0;
     }
 
+    const id = sliderState.selectedSliderId;
+    const entry = id != null ? sliderValueStorage.actionItems?.[id] : null;
+    return entry && entry.target === sliderConfig.type ? entry.value : 0;
 }
 

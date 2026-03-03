@@ -77,7 +77,6 @@ hands.onResults((results) => {
             interactionState.levels[i].selected = null;
             interactionState.levels[i].hover = null;
         }
-        sliderState.selectedSliderType = null;
         hideSlider();
         setCurrentUiState(UI_STATES.MENU);
     }
