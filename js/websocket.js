@@ -1,5 +1,6 @@
 import {handleDataUpdate, handleInitialData, sliderValueStorage} from "./data.js";
 import {syncSliderFromData} from "./slider.js";
+import {getMenuDepth} from "./menu.js";
 
 const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
 let offlineMode = false;    // if no server is there to connect, use dummmy data
@@ -149,6 +150,11 @@ function handleIncomingMessage(msg) {
 
     // update menu structure
     if (msg.action === "initial" && msg.type === "menu") {
+        const depth = getMenuDepth(msg.value["items"]);
+        if (depth > 4){
+            console.warn("The menu depth exceeds 4 levels. For optimal usability, a maximum of 4 levels is recommended.")
+        }
+
         import("./menu.js").then(module => {
             module.setMenu(msg.value);
         });

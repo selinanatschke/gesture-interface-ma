@@ -79,7 +79,7 @@ export const interactionState = {
  * @param currentDepth
  * @returns {number}
  */
-function getMenuDepth(items, currentDepth = 1) {
+export function getMenuDepth(items, currentDepth = 1) {
     if (!items) return currentDepth;
 
     let maxDepth = currentDepth;
