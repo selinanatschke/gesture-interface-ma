@@ -66,7 +66,8 @@ function createLevelState() {
         dwellStart: null,
         dwellProgress: 0,
         dwellTriggered: false,
-        previousHover: null
+        previousHover: null,
+        wasGrabbing: false
     };
 }
 export const interactionState = {
@@ -119,7 +120,10 @@ export function updateLevelInteractionState(now, level) {
     const state = interactionState.levels[level]
 
     // if a deeper level is active, do not calculate hover for higher levels OR for the levels that are not actively hovered
-    if(level < getDeepestActiveLevel() || stateItemIsNotSet(state.hover)) return;
+    if(level < getDeepestActiveLevel() || stateItemIsNotSet(state.hover)) {
+        state.wasGrabbing = false;
+        return;
+    }
 
     handlePreview(level)
 
@@ -131,25 +135,56 @@ export function updateLevelInteractionState(now, level) {
         interactionState.levels[0].selected = null;
     }
 
-    // the hover needs to be reset if either no item in the current level is hovered or if the user switched elements
+    // if a button was released (= hand open after grab), the selection of this menu item should be reset so that the button can be clicked again
+    const item = getHoveredItem(level);
+    const buttonReleased = !isGrabbing && state.wasGrabbing && item.type === "button"
+    if(buttonReleased){
+        interactionState.levels[level].selected = null;
+    }
+
+    // the hover needs to be reset if either no item in the current level is hovered or if the user switched elements or if the button was released
     const needsReset =
         !stateItemIsSet(state.hover) ||
-        state.hover !== state.previousHover;
+        state.hover !== state.previousHover ||
+        buttonReleased
 
     const progressFinished = updateDwell(needsReset, level, now);
 
     // if progress is finished and the action was not already triggered -> save new selected item + do action/navigate + reset previously selected slider
     if (progressFinished && !interactionState.levels[level].dwellTriggered) {
         interactionState.levels[level].dwellTriggered = true;
-        sliderState.selectedSliderType = null;
-        sliderState.selectedSliderId = null;
+        interactionState.levels[level].selected = interactionState.levels[level].hover
 
-        const item = getHoveredItem(level);
-        if(item.type !== "button"){     // this should never be selected if a button was hit, since the user should be able to hit it multiple times
-            interactionState.levels[level].selected = interactionState.levels[level].hover
+        if(item.type === "button"){
+            handleButtonInteraction(item, state)
+            return
         }
+        state.wasGrabbing = false;
         doActionOrHandleNavigation(item);
     }
+}
+
+/**
+ * Helper function to handle if button was clicked
+ * - buttons should fire on grab-start and can then be fired again after release
+ * @param item
+ * @param state
+ */
+function handleButtonInteraction(item, state){
+    // grab started in this frame (and it was not already grabbed)
+    if (isGrabbing && !state.wasGrabbing) {
+        doActionOrHandleNavigation(item);
+        state.dwellTriggered = true;
+        state.dwellProgress = 1;
+    }
+
+    if (!isGrabbing) {
+        state.dwellTriggered = false;
+        state.dwellStart = null;
+        state.dwellProgress = 0;
+    }
+
+    state.wasGrabbing = isGrabbing;
 }
 
 /** Determines sub menu hover states
@@ -182,6 +217,7 @@ export function updateSubmenuInteractionState(handDetected){
             state.dwellStart = null;
             state.dwellProgress = 0;
             state.dwellTriggered = false;
+            state.wasGrabbing = false;
             break;
         }
 
@@ -353,6 +389,7 @@ function updateDwell(needsReset, level, now){
         interactionState.levels[level].dwellStart = null;
         interactionState.levels[level].dwellProgress = 0;
         interactionState.levels[level].dwellTriggered= false;
+        interactionState.levels[level].wasGrabbing = false;
         return false;
     }
 
@@ -548,6 +585,7 @@ function getIconForItem(item){
 
     // stateful icon (e.g. Play/Pause)
     if(typeof item.icon === "object"){
+        console.log("icon update")
         const isActive = sliderValueStorage.isPlaying && item.type === "button" && item.target === "presentation"
         iconName = isActive ? item.icon.active : item.icon.default;
     }
