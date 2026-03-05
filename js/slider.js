@@ -273,9 +273,9 @@ function renderPresentationSliderExtras(filledFormat, format){
     }
 }
 
-function formatMinutes(value) {
-    const minutes = Math.floor(value);
-    const seconds = Math.round((value - minutes) * 60);
+function formatMinutes(secondsTotal) {
+    const minutes = Math.floor(secondsTotal / 60);
+    const seconds = Math.floor(secondsTotal % 60);
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 

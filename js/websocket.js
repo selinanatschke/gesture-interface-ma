@@ -61,7 +61,7 @@ function handleOfflineMessage(msg) {
     if (msg.action === "update" && msg.type === "slider") {
 
         if (msg.target === "presentation") {
-            const seconds = msg.value * offlinePlayback.duration / 60;
+            const seconds = msg.value * offlinePlayback.duration;
             offlinePlayback.currentTime = seconds;
 
             handleDataUpdate({

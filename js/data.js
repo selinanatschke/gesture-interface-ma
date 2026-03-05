@@ -12,8 +12,8 @@ export const sliderValueStorage = {
  * @param totalVideoLength
  */
 export function handleInitialData(totalVideoLength){
-    sliderValueStorage.videoLength = totalVideoLength / 60;
-    sliderValueStorage.currentLength = 0;
+    sliderValueStorage.videoLength = totalVideoLength;  // seconds
+    sliderValueStorage.currentLength = 0;               // seconds
 }
 
 /**
