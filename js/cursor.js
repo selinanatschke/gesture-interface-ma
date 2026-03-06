@@ -45,7 +45,7 @@ export function updateCursor(results, handDetected){
 function drawCursor(x, y) {
     if (getCurrentUiState() === UI_STATES.SLIDER) return; // do not draw cursor if slider is active
 
-    ctx.fillStyle = "blue";
+    ctx.fillStyle = "rgb(217, 71, 9)";
     ctx.beginPath();
     ctx.arc(x, y, 12, 0, Math.PI * 2);
     ctx.fill();

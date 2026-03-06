@@ -42,11 +42,11 @@ export const UI_SCALE = {
 };
 
 const MENU_COLORS = {
-    base: "rgba(255, 255, 255, 0.75)",
-    hover: "rgba(255, 120, 255, 0.75)",
-    selected: "rgba(255, 0, 255, 0.75)",
-    dwell: "rgba(0, 0, 0, 0.25)",
-    stroke: "rgba(0, 0, 0)"
+    base: "rgba(214, 214, 214, 1)",
+    hover: "rgba(188, 220, 255, 1)",
+    selected: "rgba(45, 140, 255, 1)",
+    dwell: "rgba(120, 185, 255, 1)",
+    center: "rgba(214, 214, 214, 0.5)"
 };
 
 /** State that saves all information about the menu levels
@@ -266,8 +266,8 @@ export function drawMarkingMenu() {
 
     setMenuGlobalAlpha();
 
-    ctx.strokeStyle = "black";
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
 
     // draw main menu
     for (let i = 0; i < items.length; i++) {            // loop for each segment
@@ -278,11 +278,12 @@ export function drawMarkingMenu() {
         const isSelected = i === interactionState.levels[0].selected;
 
         drawRingSegment(startAngle, endAngle, mainInnerRadius, menu.radius, isSelected, isHighlighted);
-        drawLabel(menu.items[i], startAngle, endAngle, (mainInnerRadius + menu.radius) / 2);
 
-        // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
+        // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)        const breakHoverCondition = interactionState.levels[0].dwellProgress === 0 || i !== interactionState.levels[0].hover || i === interactionState.levels[0].selected;
         const breakHoverCondition = interactionState.levels[0].dwellProgress === 0 || i !== interactionState.levels[0].hover || i === interactionState.levels[0].selected;
         drawHoverFill(breakHoverCondition, startAngle, endAngle, mainInnerRadius, menu.radius, 0);
+
+        drawLabel(menu.items[i], startAngle, endAngle, (mainInnerRadius + menu.radius) / 2);
     }
 
     drawCenterSettingsIcon(mainInnerRadius);
@@ -547,13 +548,14 @@ function drawSubMenu(level) {
         const isSelected = i === interactionState.levels[level].selected;
         const isHighlighted = isSegmentHighlighted(level, i);
         drawRingSegment(startAngleSegment, endAngleSegment, innerRadius, outerRadius, isSelected, isHighlighted);
-        drawLabel(items[i], startAngleSegment, endAngleSegment, (innerRadius + outerRadius) / 2);
 
         const state = interactionState.levels[level];
 
         // highlight active sub-segment with dwell animation ONLY IF dwell was not already triggered (important for grab confirmation)
         const breakHoverCondition = !(i === state.hover && !state.dwellTriggered && state.dwellProgress > 0);
         drawHoverFill(breakHoverCondition, startAngleSegment, endAngleSegment, innerRadius, outerRadius, level);
+
+        drawLabel(items[i], startAngleSegment, endAngleSegment, (innerRadius + outerRadius) / 2);
     }
 }
 
@@ -778,6 +780,12 @@ function getInnerRadiusForLevel(level) {
 }
 
 function drawCenterSettingsIcon(mainInnerRadius) {
+    ctx.beginPath();
+    ctx.arc(menuPosition.x, menuPosition.y, mainInnerRadius, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.fillStyle = MENU_COLORS.center;
+    ctx.fill();
+
     const icon = loadIcon("settings", "./images/settings.png");
     if (!icon) return;
 

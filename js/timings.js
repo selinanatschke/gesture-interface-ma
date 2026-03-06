@@ -33,6 +33,18 @@ export const STATES = {
 
 let currentState = STATES.ACTIVATION;
 
+// Shared top-right indicator layout/styles so dwell ring and gesture icon match menu visuals.
+const INDICATOR_STYLE = {
+    radius: 30,     // radius of dwell circle
+    margin: 20,     // how far away circle is from border of the screen
+    ringInset: 2,   // makes dwell ring not be on the edge of the background circle, but inside
+    ringWidth: 6,   // ring line weight
+    ringBackground: "rgba(188, 220, 255, 1)",
+    progressBar: "rgba(45, 140, 255, 1)",
+    backgroundFill: "rgba(214, 214, 214, 0.5)",
+    backgroundBorder: "rgba(255, 255, 255, 0.5)"
+};
+
 /**
  * Function that handles state machine (if menu is visible and all dwell/idle timers)
  * @param handDetected
@@ -182,22 +194,25 @@ export function getCurrentState() {
 export function drawDwellRing() {
     if (dwellProgress <= 0) return;
 
-    const radius = 30;
-    const lineWidth = 6;
-    const margin = 20;
-
-    const x = canvas.width - margin - radius;
-    const y = margin + radius;
+    const x = canvas.width - INDICATOR_STYLE.margin - INDICATOR_STYLE.radius;
+    const y = INDICATOR_STYLE.margin + INDICATOR_STYLE.radius;
+    const ringRadius = INDICATOR_STYLE.radius - INDICATOR_STYLE.ringInset;
 
     const startAngle = -Math.PI / 2;
     const endAngle = startAngle + dwellProgress * Math.PI * 2;
 
-    ctx.strokeStyle = "rgba(0, 150, 255, 0.9)";
-    ctx.lineWidth = lineWidth;
-    ctx.lineCap = "round";
-
+    // draws background area of progress bar (full)
+    ctx.strokeStyle = INDICATOR_STYLE.ringBackground;
+    ctx.lineWidth = INDICATOR_STYLE.ringWidth;
     ctx.beginPath();
-    ctx.arc(x, y, radius, startAngle, endAngle);
+    ctx.arc(x, y, ringRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // draws progress ring with current percentage
+    ctx.strokeStyle = INDICATOR_STYLE.progressBar;
+    ctx.lineWidth = INDICATOR_STYLE.ringWidth;
+    ctx.beginPath();
+    ctx.arc(x, y, ringRadius, startAngle, endAngle);
     ctx.stroke();
 }
 
@@ -208,22 +223,21 @@ export function drawDwellRing() {
 export function drawGestureIcon(handDetected) {
     if (!handIcon.complete) return;
 
-    const radius = 30;
-    const margin = 20;
-
-    const centerX = canvas.width - margin - radius;
-    const centerY = margin + radius;
+    const centerX = canvas.width - INDICATOR_STYLE.margin - INDICATOR_STYLE.radius;
+    const centerY = INDICATOR_STYLE.margin + INDICATOR_STYLE.radius;
 
     const activeIcon = getGestureIcon(handDetected);
     const iconSize = activeIcon === handIcon ? 36 : 30; // handIcon slightly bigger, others unchanged
 
     ctx.save();
 
-    // white background
     ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255, 255, 255, 0.75)";
+    ctx.arc(centerX, centerY, INDICATOR_STYLE.radius, 0, Math.PI * 2);
+    ctx.fillStyle = INDICATOR_STYLE.backgroundFill;
     ctx.fill();
+    ctx.strokeStyle = INDICATOR_STYLE.backgroundBorder;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
 
     // depends on hand detection
     ctx.globalAlpha = handDetected ? 1.0 : 0.5;
