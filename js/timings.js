@@ -214,7 +214,8 @@ export function drawGestureIcon(handDetected) {
     const centerX = canvas.width - margin - radius;
     const centerY = margin + radius;
 
-    const iconSize = 30; // Größe des Icons
+    const activeIcon = getGestureIcon(handDetected);
+    const iconSize = activeIcon === handIcon ? 36 : 30; // handIcon slightly bigger, others unchanged
 
     ctx.save();
 
@@ -228,7 +229,7 @@ export function drawGestureIcon(handDetected) {
     ctx.globalAlpha = handDetected ? 1.0 : 0.5;
 
     ctx.drawImage(
-        getGestureIcon(handDetected),
+        activeIcon,
         centerX - iconSize / 2,
         centerY - iconSize / 2,
         iconSize,

@@ -130,4 +130,6 @@ This method enables real responses from a dummy server that simulate real messag
   
 
 # Ressources 
-- some of the icons from the menu are from https://www.flaticon.com/free-icons
+- "grab" icon is from https://www.flaticon.com/free-icons/grab
+- "ok"/"pinch" icon is from https://icons8.de/icons/set/ok
+- all other icons are from Microsoft Powerpoint or hand painted by Selina Natschke

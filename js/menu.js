@@ -100,6 +100,8 @@ export function getMenuDepth(items, currentDepth = 1) {
  */
 const HOVER_FILL_DURATION = 3000;   // ms, how fast segment fills on hover
 
+const MAIN_LEVEL_INNER_RADIUS_RATIO = 0.4;
+
 /** Saves the previously loaded icons so that they do not have to be fetched for every frame
  *
  * @type {{}}
@@ -137,7 +139,7 @@ export function updateLevelInteractionState(now, level) {
 
     // if a button was released (= hand open after grab), the selection of this menu item should be reset so that the button can be clicked again
     const item = getHoveredItem(level);
-    const buttonReleased = !isGrabbing && state.wasGrabbing && item.type === "button"
+    const buttonReleased = !isGrabbing && state.wasGrabbing && item?.type === "button"
     if(buttonReleased){
         interactionState.levels[level].selected = null;
     }
@@ -199,6 +201,16 @@ function handleButtonInteraction(item, state){
 export function updateSubmenuInteractionState(handDetected){
     if (getCurrentUiState() === UI_STATES.SLIDER) return;
 
+    const cursorInMainMenu = stateItemIsSet(interactionState.levels[0]?.hover);
+    const cursorInSubMenu = isCursorInSubMenuRing();
+
+    // treat center hole like "outside menu": close current menu path and previews
+    if (handDetected && !cursorInMainMenu && !cursorInSubMenu) {
+        resetAllInteractionLevels();
+        hideSlider();
+        return;
+    }
+
     // iterates through levels
     for (let level = 0; level < interactionState.levels.length; level++) {
         const state = interactionState.levels[level];
@@ -232,12 +244,25 @@ export function updateSubmenuInteractionState(handDetected){
     }
 }
 
+function resetAllInteractionLevels() {
+    for (const levelState of interactionState.levels) {
+        levelState.hover = null;
+        levelState.selected = null;
+        levelState.dwellStart = null;
+        levelState.dwellProgress = 0;
+        levelState.dwellTriggered = false;
+        levelState.previousHover = null;
+        levelState.wasGrabbing = false;
+    }
+}
+
 /**
  *  draws marking menu: first main level and afterwards all submenus for selected level
  */
 export function drawMarkingMenu() {
     const { items } = menu;
     const angleStep = (Math.PI * 2) / items.length;     // angle per segment
+    const mainInnerRadius = getInnerRadiusForLevel(0);
 
     setMenuGlobalAlpha();
 
@@ -252,13 +277,15 @@ export function drawMarkingMenu() {
         const isHighlighted = isSegmentHighlighted(0, i);
         const isSelected = i === interactionState.levels[0].selected;
 
-        drawRingSegment(startAngle, endAngle, 0, menu.radius, isSelected, isHighlighted);
-        drawLabel(menu.items[i], startAngle, endAngle, menu.radius*0.6);
+        drawRingSegment(startAngle, endAngle, mainInnerRadius, menu.radius, isSelected, isHighlighted);
+        drawLabel(menu.items[i], startAngle, endAngle, (mainInnerRadius + menu.radius) / 2);
 
         // do not draw fill animation if the progress is 0 OR this segment is not hovered OR this is already selected (confirmed with dwell time)
         const breakHoverCondition = interactionState.levels[0].dwellProgress === 0 || i !== interactionState.levels[0].hover || i === interactionState.levels[0].selected;
-        drawHoverFill(breakHoverCondition, startAngle, endAngle, 0, menu.radius, 0);
+        drawHoverFill(breakHoverCondition, startAngle, endAngle, mainInnerRadius, menu.radius, 0);
     }
+
+    drawCenterSettingsIcon(mainInnerRadius);
 
     // draw submenu if cursor is hovering over selected main segment OR slider is visible OR cursor is in submenu ring
     if(interactionState.levels[0].selected === interactionState.levels[0].hover || sliderState.selectedSliderType !== null || isCursorInSubMenuRing()){
@@ -336,7 +363,10 @@ function drawHoverFill(condition, startAngle, endAngle, innerRadius, outerRadius
 
     // draw dwell fill only for hovered segment (angle based)
     ctx.beginPath();
-    ctx.moveTo(menuPosition.x, menuPosition.y);
+    ctx.moveTo(
+        menuPosition.x + Math.cos(startAngle) * outerRadius,
+        menuPosition.y + Math.sin(startAngle) * outerRadius
+    );
     const fillEndAngle = startAngle + (endAngle - startAngle) * interactionState.levels[level].dwellProgress;
     ctx.arc(menuPosition.x, menuPosition.y, outerRadius, startAngle, fillEndAngle);
     ctx.arc(menuPosition.x, menuPosition.y, innerRadius, fillEndAngle, startAngle, true);
@@ -358,7 +388,7 @@ export function getHoveredSegmentForLevel(level) {
     const { startAngle, endAngle, items } = range;
 
     const distance = getCursorDistance();
-    const innerRadius = level === 0 ? 0 :  menu.radius + (level - 1) * menu.subRadius;    // use 0 for main level because its not a ring
+    const innerRadius = getInnerRadiusForLevel(level);
     const outerRadius = menu.radius + level * menu.subRadius;
 
     if (distance < innerRadius || distance > outerRadius){
@@ -585,7 +615,6 @@ function getIconForItem(item){
 
     // stateful icon (e.g. Play/Pause)
     if(typeof item.icon === "object"){
-        console.log("icon update")
         const isActive = sliderValueStorage.isPlaying && item.type === "button" && item.target === "presentation"
         iconName = isActive ? item.icon.active : item.icon.default;
     }
@@ -597,7 +626,7 @@ function getIconForItem(item){
     return loadIcon(iconName);
 }
 
-function loadIcon(iconName){
+function loadIcon(iconName, src = `./images/label-icons/${iconName}.png`){
     if (!iconName) return null;
 
     // if icon is already known (loaded or error)
@@ -625,7 +654,7 @@ function loadIcon(iconName){
         console.warn("ICON NOT FOUND:", iconName);
     };
 
-    img.src = `./images/label-icons/${iconName}.png`;
+    img.src = src;
 
     return null;
 }
@@ -739,4 +768,25 @@ function getAngleRangeForLevel(level) {
     }
 
     return { startAngle, endAngle, items };
+}
+
+function getInnerRadiusForLevel(level) {
+    if (level === 0) {
+        return menu.radius * MAIN_LEVEL_INNER_RADIUS_RATIO;
+    }
+    return menu.radius + (level - 1) * menu.subRadius;
+}
+
+function drawCenterSettingsIcon(mainInnerRadius) {
+    const icon = loadIcon("settings", "./images/settings.png");
+    if (!icon) return;
+
+    const size = mainInnerRadius *1;
+    ctx.drawImage(
+        icon,
+        menuPosition.x - size / 2,
+        menuPosition.y - size / 2,
+        size,
+        size
+    );
 }
