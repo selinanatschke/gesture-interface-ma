@@ -5,7 +5,8 @@ import {
     getSliderPlacementForMainItem,
     interactionState,
     menu,
-    menuPosition
+    menuPosition,
+    stateItemIsSet
 } from "./menu.js";
 import { isPinched } from "./gestures.js";
 import { getCurrentState, STATES } from "./timings.js";
@@ -141,14 +142,7 @@ function drawVerticalSlider(type) {
  */
 export function handlePreview(level){
     if (!!sliderState.previewOwner) {
-
-        const stillHovered =
-            (sliderState.previewOwner?.level === 0)
-                ? interactionState.levels[0].hover === sliderState.previewOwner?.index
-                : (
-                    interactionState.levels[1].hover === sliderState.previewOwner?.sub &&
-                    interactionState.levels[0].selected === sliderState.previewOwner?.main
-                );
+        const stillHovered = isPreviewOwnerStillHovered(sliderState.previewOwner);
 
         if (!stillHovered) {
             hideSlider();
@@ -159,17 +153,54 @@ export function handlePreview(level){
     // slider preview if hover but not confirmed yet
     if (interactionState.levels[level].dwellProgress > 0 && interactionState.levels[level].dwellProgress < 1) {
         const hoveredItem = getHoveredItem(level)
-
-        const owner =
-            (level === 0)
-                ? { level: 0, index: interactionState.levels[0].hover }
-                : { level: 1, main: interactionState.levels[0].selected, sub: interactionState.levels[1].hover };
+        const owner = buildPreviewOwner(level);
 
         if (hoveredItem?.type === "slider" && !sliderState.previewOwner) {
             showSliderPreview(hoveredItem.target, owner, hoveredItem.id);
-
         }
     }
+}
+
+/**
+ * Helper function to get preview owner data
+ * if an element of level 2 is selected, the data could look something like:
+ * { level: 1, path: [0,1]} -> this means main element 0 opened child elements and child element 1 opened slider
+ *
+ * @param level
+ * @returns {{level: *, path: *[]}}
+ */
+function buildPreviewOwner(level) {
+    const path = [];
+
+    for (let i = 0; i < level; i++) {
+        path.push(interactionState.levels[i]?.selected);
+    }
+    path.push(interactionState.levels[level]?.hover);
+
+    return { level, path };
+}
+
+/**>
+ * Helper function that checks if slider owner element is still hovered
+ * @param owner
+ * @returns {boolean}
+ */
+function isPreviewOwnerStillHovered(owner) {
+    if (!owner) return false;
+
+    const ownerLevel = owner.level;
+
+    // checks for each deeper level if the selected element is still selected
+    for (let i = 0; i < ownerLevel; i++) {
+        const expectedSelected = owner.path[i];
+        if (!stateItemIsSet(expectedSelected) || interactionState.levels[i]?.selected !== expectedSelected) {
+            return false;
+        }
+    }
+
+    // checks if expected hovered element is still hovered
+    const expectedHover = owner.path[ownerLevel];
+    return stateItemIsSet(expectedHover) && interactionState.levels[ownerLevel]?.hover === expectedHover;
 }
 
 /**
