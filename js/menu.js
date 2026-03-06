@@ -664,14 +664,20 @@ function loadIcon(iconName, src = `./images/label-icons/${iconName}.png`){
 /**
  * helps determine how and where to display the sliders
  * @param type
+ * @param id
  * @returns {{position: string, orientation: string}}
  */
-export function getSliderPlacementForMainItem(type) {
+export function getSliderPlacementForMainItem(type, id) {
     // get main item that opened slider type
-    const mainItem = menu.items.find(item => {
-        if(item?.type === "slider") return item.target === type
-    });
-    const mainItemIndexThatOpenedSlider = mainItem ? menu.items.indexOf(mainItem) : interactionState.levels[0].selected;
+    let mainItemIndexThatOpenedSlider = interactionState.levels[0]?.selected;
+
+    // if no main selection is active (e.g. slider in the main level), resolve by exact ID first
+    if (!stateItemIsSet(mainItemIndexThatOpenedSlider)) {
+        const mainItemById = menu.items.find(item => item?.id === id);
+        if (mainItemById) {
+            mainItemIndexThatOpenedSlider = menu.items.indexOf(mainItemById);
+        }
+    }
 
     const angle = getMainSegmentMidAngle(mainItemIndexThatOpenedSlider);
     const position = getPlacementFromAngle(angle);

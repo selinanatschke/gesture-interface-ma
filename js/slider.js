@@ -15,7 +15,8 @@ import { sliderValueStorage } from "./data.js";
 let sliderConfig = null;
 let sliderValue;        // local slider value
 let sliderX, sliderY, sliderWidth, sliderHeight;
-const SLIDER_GAP = 100;  // distance between menu and slider
+const SLIDER_GAP_BASE = 80;          // minimal distance between menu and slider
+const SLIDER_GAP_PER_LEVEL = 20;     // additional spacing per active submenu depth
 
 // values to limit messages sent each frame (time based throttling)
 let lastSliderSendTime = 0;
@@ -293,7 +294,7 @@ export function showSlider(type, id) {
 
     sliderState.visible = true;
 
-    const placement = getSliderPlacementForMainItem(type);
+    const placement = getSliderPlacementForMainItem(type, id);
 
     // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
@@ -315,28 +316,29 @@ export function showSlider(type, id) {
     }
 
     const deepestLevel = getDeepestActiveLevel() + 1;
-    const outerMenuRadius = menu.radius + deepestLevel * menu.subRadius;    //  depends on current depth of menu
+    const outerMenuRadius = menu.radius + deepestLevel * menu.subRadius; // radius of currently visible outer menu edge
+    const sliderGap = SLIDER_GAP_BASE + deepestLevel * SLIDER_GAP_PER_LEVEL;
 
     // calculate position relative to the menu
     switch (sliderConfig.position) {
         case "right":
-            sliderX = menuPosition.x + outerMenuRadius  + SLIDER_GAP;
+            sliderX = menuPosition.x + outerMenuRadius + sliderGap;
             sliderY = menuPosition.y - sliderHeight / 2;
             break;
 
         case "left":
-            sliderX = menuPosition.x - outerMenuRadius  - sliderWidth - SLIDER_GAP;
+            sliderX = menuPosition.x - outerMenuRadius - sliderWidth - sliderGap - 80;
             sliderY = menuPosition.y - sliderHeight / 2;
             break;
 
         case "bottom":
             sliderX = menuPosition.x - sliderWidth / 2;
-            sliderY = menuPosition.y + outerMenuRadius + SLIDER_GAP;
+            sliderY = menuPosition.y + outerMenuRadius + sliderGap;
             break;
 
         case "top":
             sliderX = menuPosition.x - sliderWidth / 2;
-            sliderY = menuPosition.y - outerMenuRadius  - sliderHeight - SLIDER_GAP - 80;
+            sliderY = menuPosition.y - outerMenuRadius - sliderHeight - sliderGap - 80;
             break;
     }
     syncSliderFromData(type, id);
