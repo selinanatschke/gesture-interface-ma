@@ -266,6 +266,7 @@ export function drawMarkingMenu() {
 
     setMenuGlobalAlpha();
 
+    ctx.font = "24px RobotoCondensed";
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
 
@@ -339,7 +340,7 @@ function drawLabel(item, startAngle, endAngle, radius) {
         );
     } else {
         ctx.fillStyle = "black";                        // color of label
-        ctx.font = "32px sans-serif";
+        ctx.font = "32px RobotoCondensed";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(item.label, labelX, labelY);

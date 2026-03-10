@@ -15,13 +15,38 @@ import { sliderValueStorage } from "./data.js";
 
 let sliderConfig = null;
 let sliderValue;        // local slider value
-let sliderX, sliderY, sliderWidth, sliderHeight;
+let sliderX, sliderY, sliderAreaWidth, sliderAreaHeight;
 const SLIDER_GAP_BASE = 80;          // minimal distance between menu and slider
 const SLIDER_GAP_PER_LEVEL = 20;     // additional spacing per active submenu depth
 
 // values to limit messages sent each frame (time based throttling)
 let lastSliderSendTime = 0;
 const SLIDER_SEND_INTERVAL = 33; // ms = 30Hz (max. ca. 30 messages per second)
+
+const VERTICAL_SLIDER_LAYOUT = {
+    panelWidth: 320,
+    panelHeight: 560,
+    borderRadius: 10,
+
+    titleTop: 40,
+    titleLineHeight: 32,
+
+    trackX: 92,
+    trackY: 125,
+    trackWidth: 22,
+    trackHeight: 360,
+
+    fillWidth: 22,
+
+    valueBottomOffset: 30,
+    currentTimeOffsetX: 10,
+    totalTimeBottomOffset: 30,
+
+    handWidth: 100,
+    handHeight: 260,
+    handOffsetX: 150,
+    handOffsetY: 160
+};
 
 /**
  * This determines whether the user currently interacts with the menu or with the slider
@@ -103,37 +128,101 @@ export function drawSliderCanvas() {
  * Draws slider vertically
  */
 function drawVerticalSlider(type) {
-    // background
-    ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
-    ctx.fillRect(sliderX, sliderY, sliderWidth, sliderHeight);
+    const layout = VERTICAL_SLIDER_LAYOUT;
+    const progress = getSliderValue();
 
-    // bar chart for slider
-    const filledHeight = sliderHeight * getSliderValue();
-    ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
-    ctx.fillRect(
-        sliderX,
-        sliderY + sliderHeight - filledHeight,
-        sliderWidth,
-        filledHeight
-    );
+    // rectangle position
+    const panelX = sliderX;
+    const panelY = sliderY;
+
+    // rectangle background
+    ctx.save();
+    drawRoundedRect(panelX, panelY, layout.panelWidth, layout.panelHeight, layout.borderRadius);
+    ctx.fillStyle = "rgba(235, 235, 235, 0.7)";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,255,255,1)";
+    ctx.stroke();
+    ctx.restore();
+
+    // "empty" bar chart for slider
+    const trackX = panelX + layout.trackX;
+    const trackY = panelY + layout.trackY;
+    const trackWidth = layout.trackWidth;
+    const trackHeight = layout.trackHeight;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillRect(trackX, trackY, trackWidth, trackHeight);
+
+    // progress bar chart for slider
+    const fillHeight = trackHeight * progress;
+    const fillX = trackX + (trackWidth - layout.fillWidth) / 2;
+    const fillY = trackY + trackHeight - fillHeight;
+    ctx.fillStyle = "rgba(255, 120, 70, 0.9)";
+    ctx.fillRect(fillX, fillY, layout.fillWidth, fillHeight);
 
     // title
     ctx.fillStyle = "black";
-    ctx.font = "32px sans-serif";
+    ctx.font = "24px RobotoCondensed";
     ctx.textAlign = "center";
-    ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 30);
 
-    // if type is not presentation, use normal layout
-    if (type !== "presentation") {
-        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderWidth/2, sliderY + sliderHeight + 30);
+    if (type === "presentation") {
+        ctx.fillText("Wiedergabe", panelX + layout.panelWidth / 2, panelY + layout.titleTop);
+        ctx.fillText(
+            "vor-/zurückspulen",
+            panelX + layout.panelWidth / 2,
+            panelY + layout.titleTop + layout.titleLineHeight
+        );
     } else {
-        renderPresentationSliderExtras(filledHeight, "vertical")
+        ctx.fillText(
+            sliderConfig.title,
+            panelX + layout.panelWidth / 2,
+            panelY + layout.titleTop + 16
+        );
     }
 
-    // hand-symbol
-    if (handImg.complete) {
-        ctx.drawImage(handImg, sliderX + 70, sliderY + sliderHeight/2 - 120/2, 100, 180);
+    // type-specific labels
+    if (type === "presentation") {
+        drawPresentationVerticalInfo(trackX, trackY, trackWidth, trackHeight, fillY, layout);
+    } else {
+        // draw percentage
+        ctx.fillStyle = "black";
+        ctx.font = "24px RobotoCondensed";
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            Math.round(progress * 100) + "%",
+            trackX + trackWidth / 2,
+            trackY + trackHeight + layout.valueBottomOffset
+        );
     }
+
+    // hand image / instructions
+    if (handImg.complete) {
+        const imageX = panelX + layout.handOffsetX;
+        const imageY = panelY + layout.handOffsetY;
+        ctx.drawImage(handImg, imageX, imageY, layout.handWidth, layout.handHeight);
+    }
+}
+
+function drawPresentationVerticalInfo(trackX, trackY, trackWidth, trackHeight, fillY, layout) {
+    ctx.fillStyle = "black";
+    ctx.font = "24px RobotoCondensed";
+
+    // draw current time stamp next to progress fill
+    ctx.textAlign = "right";
+    ctx.fillText(
+        formatMinutes(sliderValueStorage.currentLength),
+        trackX - layout.currentTimeOffsetX,
+        fillY
+    );
+
+    // draw total time at the bottom of the slider
+    ctx.textAlign = "center";
+    ctx.fillText(
+        formatMinutes(sliderValueStorage.videoLength),
+        trackX + trackWidth / 2,
+        trackY + trackHeight + layout.totalTimeBottomOffset
+    );
 }
 
 /**
@@ -209,27 +298,27 @@ function isPreviewOwnerStillHovered(owner) {
 function drawHorizontalSlider(type) {
     // background
     ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
-    ctx.fillRect(sliderX, sliderY, sliderWidth, sliderHeight);
+    ctx.fillRect(sliderX, sliderY, sliderAreaWidth, sliderAreaHeight);
 
     // bar chart for slider
-    const filledWidth = sliderWidth * getSliderValue();
+    const filledWidth = sliderAreaWidth * getSliderValue();
     ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
     ctx.fillRect(
         sliderX,
         sliderY,
         filledWidth,
-        sliderHeight
+        sliderAreaHeight
     );
 
     // title
     ctx.fillStyle = "black";
-    ctx.font = "32px sans-serif";
+    ctx.font = "24px RobotoCondensed";
     ctx.textAlign = "center";
-    ctx.fillText(sliderConfig.title, sliderX + sliderWidth/2, sliderY - 20);
+    ctx.fillText(sliderConfig.title, sliderX + sliderAreaWidth/2, sliderY - 20);
 
     // if type is not presentation, use normal layout
     if (type !== "presentation") {
-        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderWidth / 2, sliderY + sliderHeight + 20
+        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderAreaWidth / 2, sliderY + sliderAreaHeight + 20
         );
     } else {
         renderPresentationSliderExtras(filledWidth, "horizontal")
@@ -238,13 +327,13 @@ function drawHorizontalSlider(type) {
     // hand-symbol with adaptive spacing
     if (handImg.complete) {
         // ...(handImg, space left to image, space above image, width, height);
-        ctx.drawImage(handImg, sliderX + sliderWidth/2 - 60, sliderY + sliderHeight + 40, 140, 140);
+        ctx.drawImage(handImg, sliderX + sliderAreaWidth/2 - 60, sliderY + sliderAreaHeight + 40, 140, 140);
     }
 }
 
 function renderPresentationSliderExtras(filledFormat, format){
     // if type is presentation, add video play button and minute counter
-    ctx.font = "32px sans-serif";
+    ctx.font = "24px RobotoCondensed";
 
     if (format === "horizontal") {
     // current time (moves with slider)
@@ -252,15 +341,15 @@ function renderPresentationSliderExtras(filledFormat, format){
         ctx.fillText(
             formatMinutes(sliderValueStorage.currentLength),
             sliderX + filledFormat,
-            sliderY + sliderHeight + 20
+            sliderY + sliderAreaHeight + 20
         );
 
         // total duration (static, right)
         ctx.textAlign = "right";
         ctx.fillText(
             formatMinutes(sliderValueStorage.videoLength),
-            sliderX + sliderWidth,
-            sliderY + sliderHeight + 20
+            sliderX + sliderAreaWidth,
+            sliderY + sliderAreaHeight + 20
         );
 
         // play icon (left of slider)
@@ -268,36 +357,7 @@ function renderPresentationSliderExtras(filledFormat, format){
             ctx.drawImage(
                 playIcon,
                 sliderX - 40,
-                sliderY + sliderHeight / 2 - 16,
-                32,
-                32
-            );
-        }
-    } else if (format ==="vertical"){
-        // current time (moves vertically with progress)
-        const currentY = sliderY + sliderHeight - filledFormat;
-
-        ctx.textAlign = "right";
-        ctx.fillText(
-            formatMinutes(sliderValueStorage.currentLength),
-            sliderX - 10,
-            currentY + 10
-        );
-
-        // total duration (bottom, centered)
-        ctx.textAlign = "center";
-        ctx.fillText(
-            formatMinutes(sliderValueStorage.videoLength),
-            sliderX + sliderWidth / 2,
-            sliderY + sliderHeight + 30
-        );
-
-        // play icon (left, center of slider)
-        if (playIcon.complete) {
-            ctx.drawImage(
-                playIcon,
-                sliderX,
-                sliderY + sliderHeight + 60,
+                sliderY + sliderAreaHeight / 2 - 16,
                 32,
                 32
             );
@@ -337,12 +397,12 @@ export function showSlider(type, id) {
 
     // set slider width and height depending on orientation
     if (sliderConfig.orientation === "vertical") {
-        sliderWidth = 20;
-        sliderHeight = 250;
+        sliderAreaWidth = VERTICAL_SLIDER_LAYOUT.panelWidth;
+        sliderAreaHeight = VERTICAL_SLIDER_LAYOUT.panelHeight;
         handImg.src = "./images/vertical_slider_instruction.png";
     } else {
-        sliderWidth = 250;
-        sliderHeight = 20;
+        sliderAreaWidth = 250;
+        sliderAreaHeight = 20;
         handImg.src = "./images/horizontal_slider_instruction.png";
     }
 
@@ -354,22 +414,22 @@ export function showSlider(type, id) {
     switch (sliderConfig.position) {
         case "right":
             sliderX = menuPosition.x + outerMenuRadius + sliderGap;
-            sliderY = menuPosition.y - sliderHeight / 2;
+            sliderY = menuPosition.y - sliderAreaHeight / 2;
             break;
 
         case "left":
-            sliderX = menuPosition.x - outerMenuRadius - sliderWidth - sliderGap - 80;
-            sliderY = menuPosition.y - sliderHeight / 2;
+            sliderX = menuPosition.x - outerMenuRadius - sliderAreaWidth - sliderGap;
+            sliderY = menuPosition.y - sliderAreaHeight / 2;
             break;
 
         case "bottom":
-            sliderX = menuPosition.x - sliderWidth / 2;
+            sliderX = menuPosition.x - sliderAreaWidth / 2;
             sliderY = menuPosition.y + outerMenuRadius + sliderGap;
             break;
 
         case "top":
-            sliderX = menuPosition.x - sliderWidth / 2;
-            sliderY = menuPosition.y - outerMenuRadius - sliderHeight - sliderGap - 80;
+            sliderX = menuPosition.x - sliderAreaWidth / 2;
+            sliderY = menuPosition.y - outerMenuRadius - sliderAreaHeight - sliderGap;
             break;
     }
     syncSliderFromData(type, id);
@@ -517,3 +577,16 @@ function getSliderValue() {
     return entry && entry.target === sliderConfig.type ? entry.value : 0;
 }
 
+function drawRoundedRect(x, y, width, height, radius) {
+    ctx.beginPath();
+    ctx.moveTo(x + radius, y);
+    ctx.lineTo(x + width - radius, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+    ctx.lineTo(x + width, y + height - radius);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    ctx.lineTo(x + radius, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    ctx.lineTo(x, y + radius);
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+}

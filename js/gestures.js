@@ -134,7 +134,7 @@ export function drawGrabHint(x, y) {
     const frame = grabFrames[Math.floor(grabAnimFrame) % grabFrames.length];
     if (!frame?.complete) return;
 
-    ctx.font = "64px sans-serif";
+    ctx.font = "64px RobotoCondensed";
     ctx.fillText("Skip dwell time", x-100, y-120);
     ctx.drawImage(frame, x+150, y-180, 100, 100);
     grabAnimFrame += 0.05; // speed
