@@ -459,11 +459,28 @@ function doActionOrHandleNavigation(selectedItem){
 
     if(selectedItem.type === "button"){
         if(selectedItem.target === "presentation"){
+            const nextPlaybackValue = sliderValueStorage.isPlaying ? "pause" : "play";
+            const playbackAtEnd =
+                sliderValueStorage.videoLength > 0 &&
+                sliderValueStorage.currentLength >= sliderValueStorage.videoLength - 0.001;
+
+            // If user presses play at end of video, restart from beginning first.
+            if (nextPlaybackValue === "play" && playbackAtEnd) {
+                sliderValueStorage.currentLength = 0;
+                sendMessage({
+                    action: "update",
+                    type: "slider",
+                    target: "presentation",
+                    value: 0,
+                    id: getPresentationSliderId() ?? selectedItem["id"]
+                });
+            }
+
             sendMessage({
                 action: "pressed",
                 type: "button",
                 target: "presentation",
-                value: sliderValueStorage.isPlaying ? "pause" : "play",
+                value: nextPlaybackValue,
                 id: selectedItem["id"]
             })
         } else {
@@ -474,6 +491,25 @@ function doActionOrHandleNavigation(selectedItem){
 
     // hide slider for all actions except slider
     hideSlider();
+}
+
+function getPresentationSliderId() {
+    return findSliderIdByTarget(menu?.items, "presentation");
+}
+
+function findSliderIdByTarget(items, target) {
+    if (!items) return null;
+
+    for (const item of items) {
+        if (item?.type === "slider" && item?.target === target) {
+            return item.id ?? null;
+        }
+
+        const nestedId = findSliderIdByTarget(item?.children, target);
+        if (nestedId != null) return nestedId;
+    }
+
+    return null;
 }
 
 /** Determines if cursor is in submenu ring (not main menu) using the radius and the cursor distance

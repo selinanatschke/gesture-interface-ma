@@ -23,6 +23,15 @@ export function handleInitialData(totalVideoLength){
 export function handleDataUpdate(msg){
     if (msg.target === "presentation") {
         sliderValueStorage.currentLength = msg.value;
+
+        // If playback reached the end, force paused state in UI model.
+        if (
+            sliderValueStorage.videoLength > 0 &&
+            sliderValueStorage.currentLength >= sliderValueStorage.videoLength
+        ) {
+            sliderValueStorage.currentLength = sliderValueStorage.videoLength;
+            sliderValueStorage.isPlaying = false;
+        }
         return;
     }
 
