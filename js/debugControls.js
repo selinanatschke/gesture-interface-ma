@@ -1,9 +1,9 @@
 import {gestureThresholds} from "./gestures.js";
 import {UI_SCALE, menu, menuPosition} from "./menu.js";
 
-export function initDebugControls() {
+const MOVE_STEP = 20;
 
-    const MOVE_STEP = 20;   // steps to rescale menu
+export function initDebugControls() {
 
     // Load persisted values from local storage
     menuPosition.x = Number(localStorage.getItem("menuPosX")) || menuPosition.x;
@@ -25,85 +25,92 @@ export function initDebugControls() {
      * This is only for testing and debugging and NO user should ever use this.
      */
     window.addEventListener("keydown", (e) => {
-        switch (e.key) {
-
-            // scale menu with + and -
-            case "+":
-                resizeMenu(UI_SCALE.radiusStep);
-                localStorage.setItem("menuRadius", String(menu?.radius ?? ""));
-                console.log("menuRadius", menu?.radius)
-                break;
-            case "-":
-                resizeMenu(-UI_SCALE.radiusStep);
-                localStorage.setItem("menuRadius", String(menu?.radius ?? ""));
-                console.log("menuRadius", menu?.radius)
-                break;
-
-            // move menu with arrow keys
-            case "ArrowLeft":
-                menuPosition.x -= MOVE_STEP;
-                localStorage.setItem("menuPosX", String(menuPosition.x));
-                break;
-            case "ArrowRight":
-                menuPosition.x += MOVE_STEP;
-                localStorage.setItem("menuPosX", String(menuPosition.x));
-                break;
-            case "ArrowUp":
-                menuPosition.y -= MOVE_STEP;
-                localStorage.setItem("menuPosY", String(menuPosition.y));
-                break;
-            case "ArrowDown":
-                menuPosition.y += MOVE_STEP;
-                localStorage.setItem("menuPosY", String(menuPosition.y));
-                break;
-
-            // increase/decrease gesture thresholds
-            case "p":
-                gestureThresholds.pinchThreshold += 0.1;
-                console.log("pinchThreshold", gestureThresholds.pinchThreshold);
-                localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
-                break;
-            case "h":
-                gestureThresholds.pinchThreshold -= 0.1;
-                console.log("pinchThreshold", gestureThresholds.pinchThreshold);
-                localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
-                break;
-            case "g":
-                gestureThresholds.grabThreshold += 0.1;
-                console.log("grabThreshold", gestureThresholds.grabThreshold);
-                localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
-                break;
-            case "b":
-                gestureThresholds.grabThreshold -= 0.1;
-                console.log("grabThreshold", gestureThresholds.grabThreshold);
-                localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
-                break;
-            case "o":
-                gestureThresholds.openPalmThreshold += 0.1;
-                console.log("openPalmThreshold", gestureThresholds.openPalmThreshold);
-                localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
-                break;
-            case "m":
-                gestureThresholds.openPalmThreshold -= 0.1;
-                console.log("openPalmThreshold", gestureThresholds.openPalmThreshold);
-                localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
-                break;
-
-            // clears local storage
-            case "c":
-                localStorage.clear();
-                console.log("Localstorage cleared")
-        }
+        handleDebugControlKey(e.key);
     });
+    window.handleDebugControlKey = handleDebugControlKey;   // function is globally available for the browser window => can be called from electron via win.webContents.executeJavascript("window.handleDebugControlKey('p')")
+}
 
-    function resizeMenu(delta) {
-        const newRadius = menu.radius + delta;
+export function handleDebugControlKey(key) {
+    switch (key) {
+        // scale menu with + and -
+        case "+":
+            resizeMenu(UI_SCALE.radiusStep);
+            localStorage.setItem("menuRadius", String(menu?.radius ?? ""));
+            console.log("menuRadius", menu?.radius);
+            return true;
+        case "-":
+            resizeMenu(-UI_SCALE.radiusStep);
+            localStorage.setItem("menuRadius", String(menu?.radius ?? ""));
+            console.log("menuRadius", menu?.radius);
+            return true;
 
-        if (
-            newRadius < UI_SCALE.minRadius ||
-            newRadius > UI_SCALE.maxRadius
-        ) return;
+        // move menu with arrow keys
+        case "ArrowLeft":
+            menuPosition.x -= MOVE_STEP;
+            localStorage.setItem("menuPosX", String(menuPosition.x));
+            return true;
+        case "ArrowRight":
+            menuPosition.x += MOVE_STEP;
+            localStorage.setItem("menuPosX", String(menuPosition.x));
+            return true;
+        case "ArrowUp":
+            menuPosition.y -= MOVE_STEP;
+            localStorage.setItem("menuPosY", String(menuPosition.y));
+            return true;
+        case "ArrowDown":
+            menuPosition.y += MOVE_STEP;
+            localStorage.setItem("menuPosY", String(menuPosition.y));
+            return true;
 
-        menu.radius = newRadius;
+        // increase/decrease gesture thresholds
+        case "p":
+            gestureThresholds.pinchThreshold += 0.1;
+            console.log("pinchThreshold", gestureThresholds.pinchThreshold);
+            localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
+            return true;
+        case "h":
+            gestureThresholds.pinchThreshold -= 0.1;
+            console.log("pinchThreshold", gestureThresholds.pinchThreshold);
+            localStorage.setItem("pinchThreshold", String(gestureThresholds.pinchThreshold));
+            return true;
+        case "g":
+            gestureThresholds.grabThreshold += 0.1;
+            console.log("grabThreshold", gestureThresholds.grabThreshold);
+            localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
+            return true;
+        case "b":
+            gestureThresholds.grabThreshold -= 0.1;
+            console.log("grabThreshold", gestureThresholds.grabThreshold);
+            localStorage.setItem("grabThreshold", String(gestureThresholds.grabThreshold));
+            return true;
+        case "o":
+            gestureThresholds.openPalmThreshold += 0.1;
+            console.log("openPalmThreshold", gestureThresholds.openPalmThreshold);
+            localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
+            return true;
+        case "m":
+            gestureThresholds.openPalmThreshold -= 0.1;
+            console.log("openPalmThreshold", gestureThresholds.openPalmThreshold);
+            localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
+            return true;
+
+        // clears local storage
+        case "c":
+            localStorage.clear();
+            console.log("Localstorage cleared");
+            return true;
+        default:
+            return false;
     }
+}
+
+function resizeMenu(delta) {
+    const newRadius = menu.radius + delta;
+
+    if (
+        newRadius < UI_SCALE.minRadius ||
+        newRadius > UI_SCALE.maxRadius
+    ) return;
+
+    menu.radius = newRadius;
 }
