@@ -139,6 +139,7 @@ export function updateLevelInteractionState(now, level) {
 
     // if a button was released (= hand open after grab), the selection of this menu item should be reset so that the button can be clicked again
     const item = getHoveredItem(level);
+    if(!item) return;
     const buttonReleased = !isGrabbing && state.wasGrabbing && item?.type === "button"
     if(buttonReleased){
         interactionState.levels[level].selected = null;
@@ -158,35 +159,27 @@ export function updateLevelInteractionState(now, level) {
         interactionState.levels[level].selected = interactionState.levels[level].hover
 
         if(item.type === "button"){
-            handleButtonInteraction(item, state)
-            return
+            // fire once when confirmation is complete, regardless of dwell or grab.
+            doActionOrHandleNavigation(item);
+
+            // buttons are momentary actions and should not stay in "selected" visual state.
+            interactionState.levels[level].selected = null;
+
+            if (isGrabbing) {
+                // keep trigger lock while grab is held; reset happens on release.
+                state.wasGrabbing = true;
+            } else {
+                // restart dwell cycle from zero while staying on the same item.
+                state.dwellStart = null;
+                state.dwellProgress = 0;
+                state.dwellTriggered = false;
+                state.wasGrabbing = false;
+            }
+            return;
         }
         state.wasGrabbing = false;
         doActionOrHandleNavigation(item);
     }
-}
-
-/**
- * Helper function to handle if button was clicked
- * - buttons should fire on grab-start and can then be fired again after release
- * @param item
- * @param state
- */
-function handleButtonInteraction(item, state){
-    // grab started in this frame (and it was not already grabbed)
-    if (isGrabbing && !state.wasGrabbing) {
-        doActionOrHandleNavigation(item);
-        state.dwellTriggered = true;
-        state.dwellProgress = 1;
-    }
-
-    if (!isGrabbing) {
-        state.dwellTriggered = false;
-        state.dwellStart = null;
-        state.dwellProgress = 0;
-    }
-
-    state.wasGrabbing = isGrabbing;
 }
 
 /** Determines sub menu hover states
