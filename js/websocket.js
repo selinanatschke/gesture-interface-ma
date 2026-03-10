@@ -16,6 +16,12 @@ let offlinePlayback = {
     playing: false
 };
 
+const OFFLINE_INITIAL_SLIDER_VALUES = {
+    volume: 0.5,
+    brightness: 0.7,
+    vibration: 0.2
+};
+
 socket.onopen = () => {
     console.log("WebSocket connected");
 };
@@ -72,7 +78,7 @@ function handleOfflineMessage(msg) {
         } else {
             handleDataUpdate(msg);
         }
-        syncSliderFromData(msg.target);
+        syncSliderFromData(msg.target, msg.id);
         return
     }
 
@@ -100,8 +106,6 @@ async function initOfflineData() {
     offlinePlayback.playing = false;
     sliderValueStorage.isPlaying = false;
 
-    handleInitialData(750);
-
     const response = await fetch("./offlineMenu.json");
     const menu = await response.json();
     handleIncomingMessage({
@@ -109,9 +113,41 @@ async function initOfflineData() {
         type: "menu",
         value: menu
     });
-    handleDataUpdate({target: "volume", value: 0.5, id: 11});
-    handleDataUpdate({target: "brightness", value: 0.7, id: 12});
-    handleDataUpdate({target: "vibration", value: 0.2, id: 13});
+
+    sendOfflineInitialMessages(menu.items);
+}
+
+function sendOfflineInitialMessages(items) {
+    for (const item of items ?? []) {
+        if (item?.children?.length) {
+            sendOfflineInitialMessages(item.children);
+        }
+
+        if (item?.type === "slider") {
+            const value = item.target === "presentation"
+                ? offlinePlayback.duration
+                : (OFFLINE_INITIAL_SLIDER_VALUES[item.target] ?? 0);
+
+            handleIncomingMessage({
+                action: "initial",
+                type: "slider",
+                target: item.target,
+                value,
+                id: item.id
+            });
+            continue;
+        }
+
+        if (item?.type === "button") {
+            handleIncomingMessage({
+                action: "initial",
+                type: "button",
+                target: item.target,
+                value: item.target === "presentation" && offlinePlayback.playing ? "play" : "pause",
+                id: item.id
+            });
+        }
+    }
 }
 
 /**
@@ -168,12 +204,29 @@ function handleIncomingMessage(msg) {
     }
 
     // inital message that sends total video length in seconds and sets currentTime to 0
-    if (msg.action === "initial" && msg.type === "slider" && msg.target === "presentation") {
-        handleInitialData(msg.value);
+    if (msg.action === "initial" && msg.type === "slider") {
+        if (msg.target === "presentation") {
+            handleInitialData(msg.value);
+            return;
+        }
+
+        handleDataUpdate({
+            target: msg.target,
+            value: msg.value,
+            id: msg.id
+        });
+        syncSliderFromData(msg.target, msg.id);
         return;
     }
 
-    // 
+    if (msg.action === "initial" && msg.type === "button") {
+        if (msg.target === "presentation") {
+            sliderValueStorage.isPlaying = msg.value === "play";
+        }
+        return;
+    }
+
+    //
     if (msg.action === "update" && msg.type === "slider") {
         handleDataUpdate({
             target: msg.target,
@@ -181,7 +234,7 @@ function handleIncomingMessage(msg) {
             id: msg.id
         });
 
-        syncSliderFromData(msg.target);
+        syncSliderFromData(msg.target, msg.id);
     }
 
     if (msg.action === "pressed" && msg.type === "button") {
