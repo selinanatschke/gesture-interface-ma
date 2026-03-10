@@ -48,6 +48,27 @@ const VERTICAL_SLIDER_LAYOUT = {
     handOffsetY: 160
 };
 
+const HORIZONTAL_SLIDER_LAYOUT = {
+    panelWidth: 720,
+    panelHeight: 360,
+    borderRadius: 10,
+
+    titleTop: 50,
+
+    instructionWidth: 380,
+    instructionHeight: 130,
+    instructionOffsetX: 170,
+    instructionOffsetY: 105,
+
+    trackX: 120,
+    trackY: 245,
+    trackWidth: 480,
+    trackHeight: 26,
+
+    valueTopOffset: 55,
+    totalValueOffsetX: 35
+};
+
 /**
  * This determines whether the user currently interacts with the menu or with the slider
  * @type {{MENU: string, SLIDER: string}}
@@ -296,73 +317,105 @@ function isPreviewOwnerStillHovered(owner) {
  * Draws slider vertically
  */
 function drawHorizontalSlider(type) {
-    // background
-    ctx.fillStyle = "rgba(255, 180, 120, 0.25)";
-    ctx.fillRect(sliderX, sliderY, sliderAreaWidth, sliderAreaHeight);
+    const layout = HORIZONTAL_SLIDER_LAYOUT;
+    const progress = getSliderValue();
 
-    // bar chart for slider
-    const filledWidth = sliderAreaWidth * getSliderValue();
-    ctx.fillStyle = "rgba(255, 100, 0, 0.8)";
-    ctx.fillRect(
-        sliderX,
-        sliderY,
-        filledWidth,
-        sliderAreaHeight
-    );
+    const panelX = sliderX;
+    const panelY = sliderY;
+
+    // panel background
+    ctx.save();
+    drawRoundedRect(panelX, panelY, layout.panelWidth, layout.panelHeight, layout.borderRadius);
+    ctx.fillStyle = "rgba(235, 235, 235, 0.7)";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(255,255,255,1)";
+    ctx.stroke();
+    ctx.restore();
 
     // title
     ctx.fillStyle = "black";
     ctx.font = "24px RobotoCondensed";
     ctx.textAlign = "center";
-    ctx.fillText(sliderConfig.title, sliderX + sliderAreaWidth/2, sliderY - 20);
 
-    // if type is not presentation, use normal layout
-    if (type !== "presentation") {
-        ctx.fillText(Math.round(getSliderValue() * 100) + "%", sliderX + sliderAreaWidth / 2, sliderY + sliderAreaHeight + 20
+    if (type === "presentation") {
+        ctx.fillText(
+            "Wiedergabe vor-/zurückspulen",
+            panelX + layout.panelWidth / 2,
+            panelY + layout.titleTop
         );
     } else {
-        renderPresentationSliderExtras(filledWidth, "horizontal")
+        ctx.fillText(
+            sliderConfig.title,
+            panelX + layout.panelWidth / 2,
+            panelY + layout.titleTop
+        );
     }
 
-    // hand-symbol with adaptive spacing
+    // instruction image (hand + arrows)
     if (handImg.complete) {
-        // ...(handImg, space left to image, space above image, width, height);
-        ctx.drawImage(handImg, sliderX + sliderAreaWidth/2 - 60, sliderY + sliderAreaHeight + 40, 140, 140);
+        ctx.drawImage(
+            handImg,
+            panelX + layout.instructionOffsetX,
+            panelY + layout.instructionOffsetY,
+            layout.instructionWidth,
+            layout.instructionHeight
+        );
+    }
+
+    // empty slider track
+    const trackX = panelX + layout.trackX;
+    const trackY = panelY + layout.trackY;
+    const trackWidth = layout.trackWidth;
+    const trackHeight = layout.trackHeight;
+
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    ctx.fillRect(trackX, trackY, trackWidth, trackHeight);
+
+    // progress fill
+    const fillWidth = trackWidth * progress;
+    ctx.fillStyle = "rgba(255, 120, 70, 0.9)";
+    ctx.fillRect(trackX, trackY, fillWidth, trackHeight);
+
+    // type-specific labels
+    if (type === "presentation") {
+        drawPresentationHorizontalInfo(trackX, trackY, trackWidth, fillWidth, layout);
+    } else {
+        drawDefaultHorizontalInfo(trackX, trackY, trackWidth, layout, progress);
     }
 }
 
-function renderPresentationSliderExtras(filledFormat, format){
-    // if type is presentation, add video play button and minute counter
+function drawDefaultHorizontalInfo(trackX, trackY, trackWidth, layout, progress) {
+    ctx.fillStyle = "black";
+    ctx.font = "24px RobotoCondensed";
+    ctx.textAlign = "center";
+
+    ctx.fillText(
+        Math.round(progress * 100) + "%",
+        trackX + trackWidth / 2,
+        trackY + layout.valueTopOffset
+    );
+}
+
+function drawPresentationHorizontalInfo(trackX, trackY, trackWidth, fillWidth, layout) {
+    ctx.fillStyle = "black";
     ctx.font = "24px RobotoCondensed";
 
-    if (format === "horizontal") {
-    // current time (moves with slider)
-        ctx.textAlign = "left";
-        ctx.fillText(
-            formatMinutes(sliderValueStorage.currentLength),
-            sliderX + filledFormat,
-            sliderY + sliderAreaHeight + 20
-        );
+    // current time below current fill position
+    ctx.textAlign = "center";
+    ctx.fillText(
+        formatMinutes(sliderValueStorage.currentLength),
+        trackX + fillWidth,
+        trackY + layout.valueTopOffset
+    );
 
-        // total duration (static, right)
-        ctx.textAlign = "right";
-        ctx.fillText(
-            formatMinutes(sliderValueStorage.videoLength),
-            sliderX + sliderAreaWidth,
-            sliderY + sliderAreaHeight + 20
-        );
-
-        // play icon (left of slider)
-        if (playIcon.complete) {
-            ctx.drawImage(
-                playIcon,
-                sliderX - 40,
-                sliderY + sliderAreaHeight / 2 - 16,
-                32,
-                32
-            );
-        }
-    }
+    // total duration on right side of the track
+    ctx.textAlign = "left";
+    ctx.fillText(
+        formatMinutes(sliderValueStorage.videoLength),
+        trackX + trackWidth + layout.totalValueOffsetX,
+        trackY + 10
+    );
 }
 
 function formatMinutes(secondsTotal) {
@@ -401,8 +454,8 @@ export function showSlider(type, id) {
         sliderAreaHeight = VERTICAL_SLIDER_LAYOUT.panelHeight;
         handImg.src = "./images/vertical_slider_instruction.png";
     } else {
-        sliderAreaWidth = 250;
-        sliderAreaHeight = 20;
+        sliderAreaWidth = HORIZONTAL_SLIDER_LAYOUT.panelWidth;
+        sliderAreaHeight = HORIZONTAL_SLIDER_LAYOUT.panelHeight;
         handImg.src = "./images/horizontal_slider_instruction.png";
     }
 
