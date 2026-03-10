@@ -88,7 +88,7 @@ hands.onResults((results) => {
             if (getCurrentUiState() === UI_STATES.SLIDER) {
                 updateSlider(results, handDetected);
             } else {
-                drawGrabHint(window.innerWidth/2, 200);
+                drawGrabHint(window.innerWidth/2, window.innerWidth/20);
                 interactionState.levels[0].hover = getHoveredSegmentForLevel(0);
 
                 // draw hover animation for all levels

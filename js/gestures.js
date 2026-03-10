@@ -25,6 +25,8 @@ for (let i = 0; i <= 1; i++) {
     img.src = `./images/grab_hint/frame_${i}.png`;
     grabFrames.push(img);
 }
+const grabInfoIcon = new Image();
+grabInfoIcon.src = "./images/grab_hint/info.png";
 
 /**
  * general function to detect gestures
@@ -134,8 +136,53 @@ export function drawGrabHint(x, y) {
     const frame = grabFrames[Math.floor(grabAnimFrame) % grabFrames.length];
     if (!frame?.complete) return;
 
-    ctx.font = "64px RobotoCondensed";
-    ctx.fillText("Skip dwell time", x-100, y-120);
-    ctx.drawImage(frame, x+150, y-180, 100, 100);
+    const panelWidth = 250;
+    const panelHeight = 50;
+    const panelStartX = x - panelWidth / 2;
+    const panelStartY = y - panelHeight / 2;
+    const panelRadius = 10;
+
+    // background panel
+    drawRoundedRect(panelStartX, panelStartY, panelWidth, panelHeight, panelRadius);
+    ctx.fillStyle = "rgba(45, 140, 255, 0.7)";
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(45, 140, 255, 1)";
+    ctx.stroke();
+
+    // info icon on the left
+    const infoSize = 30;
+    const infoX = panelStartX + 8;
+    const infoY = panelStartY + (panelHeight - infoSize) / 2;
+    if (grabInfoIcon.complete) {
+        ctx.drawImage(grabInfoIcon, infoX, infoY, infoSize, infoSize);
+    }
+
+    // label text
+    ctx.fillStyle = "rgba(255, 255, 255, 1)";
+    ctx.font = "22px RobotoCondensed";
+    ctx.fillText("Skip dwell time", panelStartX + 112, panelStartY + panelHeight / 2 + 2);
+
+    // animated hand icon on the right
+    const handSize = 32;
+    const handX = panelStartX + panelWidth - handSize - 12;
+    const handY = panelStartY + (panelHeight - handSize) / 2;
+    ctx.drawImage(frame, handX, handY, handSize, handSize);
+
     grabAnimFrame += 0.05; // speed
+}
+
+function drawRoundedRect(x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + width - r, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+    ctx.lineTo(x + width, y + height - r);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+    ctx.lineTo(x + r, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
 }
