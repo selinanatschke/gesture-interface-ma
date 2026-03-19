@@ -9,7 +9,7 @@ This method uses offline dummy data without responses from neither a real server
 
 ### Option b1: Electron
 You can run the electron application by typing these commands in the command line:
-```cd electron-app``` and then ```npm run start ```
+```cd electron-app```, then ```npm install``` (when cloning the repository for the first time) and then ```npm run start ```
 
 This method uses offline dummy data without responses from neither a real server nor a dummy server.
 
@@ -21,6 +21,27 @@ Then you can now start the electron server with these commands (in the same fold
 ```npm run start ```
 
 This method enables real responses from a dummy server that simulate real messages from the UE server. 
+
+### Calibration
+#### Calibration Mode (relevant for Option b1, b2)
+The Electron app contains a calibration mode for debugging and fine-tuning menu layout and gesture thresholds.
+- Toggle calibration mode with `F10` => Console prints "CalibrationMode ENABLED" and "Calibration keys registered".
+- Only when calibration mode is enabled, calibration keys are registered as global shortcuts in Electron.
+- This is important because the app window is non-focusable (`focusable: false`) and should not steal focus from underlying applications. If the Calibration Mode was always enabled, the app steals the keys from the underlying application.
+- Default on start is Calibration Mode disabled. 
+- Calibration keys are unregistered again when calibration mode is disabled (`F10`).
+- On app quit, all global shortcuts are unregistered.
+- (For Browser use (Option a) this is not relevant, since there is no underlying application => all keys are always usable)
+
+#### Calibration Keys
+- For Option a changes are persisted in `localStorage` and are reused on next start. For Option b1, b2 the changes are reverted after the session is closed.
+
+- `ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`: Move menu position in 20px steps.
+- `+` / `-`: Increase/decrease menu radius.
+- `p` / `h`: Increase/decrease `pinchThreshold` by `0.1`.
+- `g` / `b`: Increase/decrease `grabThreshold` by `0.1`.
+- `o` / `m`: Increase/decrease `openPalmThreshold` by `0.1`.
+- `c`: Clear `localStorage` (resets persisted calibration values for Option a => results can be seen after restart only).
 
 ## Features
 ### 1. HandDetection:
