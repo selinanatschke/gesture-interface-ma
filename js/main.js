@@ -63,7 +63,16 @@ hands.onResults((results) => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (!menu || !menu.items) return;   // necessary if menu data was not received yet
-    menu.radius = Number(localStorage.getItem("menuRadius")) || menu.radius;
+    if (!Number.isFinite(menu.defaultRadius)) menu.defaultRadius = menu.radius; // saves defaultRadius
+
+    // loads menu radius from storage / uses default value (cannot be moved to debugControls because menu is often null when this is called (room for improvement))
+    const persistedMenuRadiusRaw = localStorage.getItem("menuRadius");
+    if (persistedMenuRadiusRaw !== null) {
+        const persistedMenuRadius = Number(persistedMenuRadiusRaw);
+        if (Number.isFinite(persistedMenuRadius)) {
+            menu.radius = persistedMenuRadius;
+        }
+    }
 
     // check if hand is detected -> if yes, reset timers; if not, update idle timer
     const handDetected = results.multiHandLandmarks && results.multiHandLandmarks.length > 0;

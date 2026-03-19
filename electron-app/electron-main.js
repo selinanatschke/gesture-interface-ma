@@ -4,19 +4,19 @@ let calibrationModeEnabled = false;
 let calibrationKeysRegistered = false;
 
 const CALIBRATION_KEYS = [
-    { accelerators: ["Up"], key: "ArrowUp" },
-    { accelerators: ["Down"], key: "ArrowDown" },
-    { accelerators: ["Left"], key: "ArrowLeft" },
-    { accelerators: ["Right"], key: "ArrowRight" },
-    { accelerators: ["=", "numadd", "Shift+="], key: "+" },
-    { accelerators: ["-", "numsub"], key: "-" },
-    { accelerators: ["P"], key: "p" },
-    { accelerators: ["H"], key: "h" },
-    { accelerators: ["G"], key: "g" },
-    { accelerators: ["B"], key: "b" },
-    { accelerators: ["O"], key: "o" },
-    { accelerators: ["M"], key: "m" },
-    { accelerators: ["C"], key: "c" }
+    { accelerators: ["Up"], key: "ArrowUp", message: `Menu moved up by 20px.`},
+    { accelerators: ["Down"], key: "ArrowDown", message: `Menu moved down by 20px.` },
+    { accelerators: ["Left"], key: "ArrowLeft", message: `Menu moved up left 20px.`},
+    { accelerators: ["Right"], key: "ArrowRight", message: `Menu moved up right 20px.` },
+    { accelerators: ["=", "numadd", "Shift+="], key: "+", message: "Menu radius increased by 20px." },
+    { accelerators: ["-", "numsub"], key: "-", message: "Menu radius decreased by 20px." },
+    { accelerators: ["P"], key: "p", message: "Pinch threshold increased by 0.1." },
+    { accelerators: ["H"], key: "h", message: "Pinch threshold decreased by 0.1." },
+    { accelerators: ["G"], key: "g", message: "Grab threshold increased by 0.1." },
+    { accelerators: ["B"], key: "b", message: "Grab threshold decreased by 0.1." },
+    { accelerators: ["O"], key: "o", message: "Open Palm threshold increased by 0.1." },
+    { accelerators: ["M"], key: "m", message: "Open Palm threshold decreased by 0.1." },
+    { accelerators: ["C"], key: "c", message: `You cleared the calibration settings. This will be visible after restarting the electron application.` }
 ];
 
 // calls javascript function from debugControl.js
@@ -27,17 +27,34 @@ function triggerDebugControl(win, key) {
     );
 }
 
+function formatCalibrationState(state) {
+    if (!state || typeof state !== "object") return "No state returned";
+
+    const x = state.menuPosition?.x;
+    const y = state.menuPosition?.y;
+    const radius = state.menuRadius;
+    const pinch = state.thresholds?.pinch;
+    const grab = state.thresholds?.grab;
+    const openPalm = state.thresholds?.openPalm;
+
+    return `Current Calibration: position=(${x}, ${y}), radius=${radius}, pinch=${pinch}, grab=${grab}, openPalm=${openPalm}`;
+}
+
 // keys for calibration in electron will only be registered if the calibration mode is on (otherwise in underlying applications the keys are not arriving)
 function registerCalibrationKeys(win) {
     if (calibrationKeysRegistered) {
         return;
     }
 
-    CALIBRATION_KEYS.forEach(({ accelerators, key }) => {
+    CALIBRATION_KEYS.forEach(({ accelerators, key, message }) => {
         accelerators.forEach((accelerator) => {
-            globalShortcut.register(accelerator, () => {
-                console.log(`Key "${key}"`);
-                triggerDebugControl(win, key);
+            globalShortcut.register(accelerator, async () => {
+                try {
+                    const state = await triggerDebugControl(win, key);
+                    console.log(`Key "${key}": ${message}       ${formatCalibrationState(state)}`);
+                } catch (error) {
+                    console.error(`Calibration key "${key}" failed`, error);
+                }
             });
         });
     });

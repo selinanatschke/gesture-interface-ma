@@ -8,10 +8,16 @@ export let isOpenHand = false;
  * Thresholds are saved to debug correct thresholds depending on distances
  * @type {{pinchThreshold: number, openPalmThreshold: number, grabThreshold: number}}
  */
-export let gestureThresholds = {
+export const DEFAULT_GESTURE_THRESHOLDS = {
     pinchThreshold: 0.05,
     openPalmThreshold: 0.3,
     grabThreshold: 0.13
+};
+
+export let gestureThresholds = {
+    pinchThreshold: DEFAULT_GESTURE_THRESHOLDS.pinchThreshold,
+    openPalmThreshold: DEFAULT_GESTURE_THRESHOLDS.openPalmThreshold,
+    grabThreshold: DEFAULT_GESTURE_THRESHOLDS.grabThreshold
 }
 
 /**
