@@ -99,10 +99,10 @@ export function handleDebugControlKey(key) {
             console.log("OpenPalmThreshold decreased by 0.1. Current threshold: ", gestureThresholds.openPalmThreshold);
             localStorage.setItem("openPalmThreshold", String(gestureThresholds.openPalmThreshold));
             break;
-
         // clears local storage
         case "c":
             CALIBRATION_STORAGE_KEYS.forEach((storageKey) => localStorage.removeItem(storageKey));
+            localStorage.removeItem("openPalmFrontalThreshold");
 
             gestureThresholds.pinchThreshold = DEFAULT_GESTURE_THRESHOLDS.pinchThreshold;
             gestureThresholds.grabThreshold = DEFAULT_GESTURE_THRESHOLDS.grabThreshold;

@@ -94,12 +94,15 @@ function updateIsOpenHand(results, handDetected) {
         return;
     }
 
-    const avgDistance = calculateAvgFingerDistance(results)
+    const avgDistance = calculateAvgFingerDistance(results);
+    const hand = results.multiHandLandmarks[0];
+    const thumbToPinkyDistanceX = Math.abs(hand[4].x - hand[20].x) + gestureThresholds.openPalmThreshold*0.67; // additional offset so that we can use the same threshold for both open palm distances, but since pinky and thumb have a smaller distance than fingertips and palm button, we need to add an offset.
 
     const fingersExtended = avgDistance > gestureThresholds.openPalmThreshold;
+    const frontalCheck = thumbToPinkyDistanceX > gestureThresholds.openPalmThreshold;
 
-    // Open hand = finger extended + no grab + no pinch
-    isOpenHand = fingersExtended && !isGrabbing && !isPinched;
+    // Open hand = finger extended + frontal palm + no grab + no pinch
+    isOpenHand = fingersExtended && frontalCheck && !isGrabbing && !isPinched;
 }
 
 /**
