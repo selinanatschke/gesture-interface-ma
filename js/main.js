@@ -25,6 +25,7 @@ import {
 } from "./slider.js";
 import { updateGestures, drawGrabHint } from "./gestures.js";
 import { initDebugControls } from "./debugControls.js";
+import { initCameraSelector } from "./cameraSelector.js";
 import "./websocket.js"; // starts websocket
 
 const video = document.getElementById("video");
@@ -113,15 +114,32 @@ hands.onResults((results) => {
     }
 });
 
+const searchParams = new URLSearchParams(window.location.search); // window.location.search is part of the url after ?
+const preferredCameraIndex = Number(searchParams.get("cameraIndex"));
+
 // start camera
-const camera = new Camera(video, {
-    onFrame: async () => {
-        await hands.send({ image: video });
+initCameraSelector(
+    video,
+    async () => {
+        if (!video.srcObject) return;
+        if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) return;
+        if (!Number.isFinite(video.videoWidth) || !Number.isFinite(video.videoHeight)) return;
+        if (video.videoWidth <= 0 || video.videoHeight <= 0) return;
+        try {
+            await hands.send({ image: video });
+        } catch (error) {
+            // MediaPipe can abort on unstable frames (e.g. during device switches). Skip and continue.
+            console.error("Hands frame processing failed", error);
+        }
     },
-    width: 1280,
-    height: 720,
+    {
+        width: 1280,
+        height: 720,
+        preferredCameraIndex: Number.isInteger(preferredCameraIndex) && preferredCameraIndex >= 0 ? preferredCameraIndex : null
+    }
+).catch((error) => {
+    console.error("Camera initialization failed", error);
 });
 
-camera.start();
 video.style.display = "none";
 

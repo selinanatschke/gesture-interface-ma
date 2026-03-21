@@ -13,6 +13,17 @@ You can run the electron application by typing these commands in the command lin
 
 This method uses offline dummy data without responses from neither a real server nor a dummy server.
 
+Without CLI parameters, `npm run start` now opens one Electron window on all available displays and uses the default camera. The camera can be selected in Calibration Mode.
+
+#### Multi-Screen + Camera Mapping (CLI)
+You can control display and camera assignment via CLI args:
+- `--screens=0,1` opens windows only on the selected display indices.
+- `--cams=0,2` assigns camera index `0` to first created window and `2` to second created window.
+
+Examples:
+- ```npm run start -- --screens=1,2 --cams=2,0```
+If `--cams` is not provided (or shorter than `--screens`), missing windows keep automatic camera selection / saved camera per display. For this case cameras can also be assigned via UI.
+
 ### Option b2: Electron + Dummy Server
 To start the dummy server you have to type these commands in the command line:
 ```cd electron-app``` and then ```node mock-unreal-server.js```
