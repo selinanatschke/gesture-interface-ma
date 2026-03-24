@@ -30,12 +30,18 @@ function parseCliArgs(argv) {
         cameraIndices: []
     };
 
+    console.log("argv", argv)
+
     const parseNonNegativeIntList = (value) => value
         .split(",")
         .map((part) => Number.parseInt(part.trim(), 10))
         .filter((number) => Number.isInteger(number) && number >= 0);
 
+    var args2 = process.argv.slice(2);
+console.log("args2", args2)
+
     argv.forEach((arg) => {
+        console.log("arg", arg)
         if (!arg.startsWith("--")) return;
 
         const [rawKey, rawValue = ""] = arg.slice(2).split("=");
@@ -259,6 +265,10 @@ function createWindowsFromCliConfig(cliConfig) {
     console.log(`Camera mapping by window index: ${selectedCameras}`);
 }
 
+process.argv.forEach(function (val, index, array) {
+    console.log("CLI ----", index + ': ' + val);
+});
+console.log("TEST ", process.argv.slice(2))
 const cliConfig = parseCliArgs(process.argv.slice(2));
 
 /**
