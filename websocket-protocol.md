@@ -5,6 +5,28 @@
 - Values normalized to 0.0 – 1.0 unless stated otherwise
 
 ---
+### WebSocket target configuration
+The frontend WebSocket target is configured in `ws-config.json` (project root):
+
+```json
+{
+  "host": "localhost",
+  "port": 3000
+}
+```
+
+If you want to connect to another server (instead of the local mock server), set `host` and `port` to that server, e.g.:
+
+```json
+{
+  "host": "192.168.178.25",
+  "port": 8080
+}
+```
+
+Fallback behavior: if `ws-config.json` is missing or invalid, the app uses `ws://localhost:3000`.
+
+---
 ### Message Structure
 
 #### General structure

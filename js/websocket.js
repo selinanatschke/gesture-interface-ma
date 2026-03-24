@@ -6,7 +6,7 @@ import {getMenuDepth} from "./menu.js";
 Note: The offline data transfer only works for the offlineMenu.json structure!
  */
 
-const socket = new WebSocket("ws://localhost:3000");    // TODO port that uses UE
+const socket = new WebSocket(await getWebSocketTarget());
 let offlineMode = false;    // if no server is there to connect, use dummmy data
 let offlineInterval = null;
 
@@ -21,6 +21,18 @@ const OFFLINE_INITIAL_SLIDER_VALUES = {
     brightness: 0.7,
     vibration: 0.2
 };
+
+async function getWebSocketTarget() {
+    try {
+        const response = await fetch("./ws-config.json", { cache: "no-store" }); // no store: browser should not get file from cache but load it freshly each time
+        const parsedJson = await response.json();
+        const host = parsedJson?.host || "localhost";
+        const port = parsedJson?.port || 3000;
+        return `ws://${host}:${port}`;
+    } catch {
+        return "ws://localhost:3000";
+    }
+}
 
 socket.onopen = () => {
     console.log("WebSocket connected");

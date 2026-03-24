@@ -1,5 +1,6 @@
 # gesture-interface-ma
 This repository is set up to create an interface used in the MIR (https://www.htw-dresden.de/hochschule/fakultaeten/info-math/labore-und-lehrplattformen/mir) to enable gesture interaction with marking menus.
+Information about the connection via websocket to a destination can be found in webscoket-protocol.md
 
 ## Start application
 ### Option a: Web
