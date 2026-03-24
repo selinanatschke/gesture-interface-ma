@@ -117,6 +117,9 @@ export function handleDebugControlKey(key) {
 
             console.log("Calibration reset applied immediately (position, radius, thresholds).");
             break;
+        case "f":
+            window.dispatchEvent(new CustomEvent("force-offline-mode")); // sends custom event so that websocket can listen to it
+            break;
         default:
             handled = false;
             break;

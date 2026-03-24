@@ -18,7 +18,8 @@ const CALIBRATION_KEYS = [
     { accelerators: ["B"], key: "b", message: "Grab threshold decreased by 0.1." },
     { accelerators: ["O"], key: "o", message: "Open Palm threshold increased by 0.1." },
     { accelerators: ["M"], key: "m", message: "Open Palm threshold decreased by 0.1." },
-    { accelerators: ["C"], key: "c", message: `You cleared the calibration settings. This will be visible after restarting the electron application.` }
+    { accelerators: ["C"], key: "c", message: `You cleared the calibration settings. This will be visible after restarting the electron application.` },
+    { accelerators: ["F"], key: "f", message: "Offline mode enabled."}
 ];
 
 // reads arguments from npm command like "--screens=1,2" and "--cams=2,0"

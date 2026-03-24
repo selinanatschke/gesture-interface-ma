@@ -6,7 +6,13 @@ import {getMenuDepth} from "./menu.js";
 Note: The offline data transfer only works for the offlineMenu.json structure!
  */
 
-const socket = new WebSocket(await getWebSocketTarget());
+const wsTarget = await getWebSocketTarget();
+let socket = null;
+
+const RECONNECT_INTERVAL_MS = 3000;
+let reconnectTimeout = null;
+let retryAttemptCount = 0;
+
 let offlineMode = false;    // if no server is there to connect, use dummmy data
 let offlineInterval = null;
 
@@ -34,26 +40,10 @@ async function getWebSocketTarget() {
     }
 }
 
-socket.onopen = () => {
-    console.log("WebSocket connected");
-};
+// listens to offline mode event to stop try and connect to server
+window.addEventListener("force-offline-mode", requestOfflineMode);
 
-// receives messages from UE
-socket.onmessage = (event) => {
-    const msg = JSON.parse(event.data);
-    handleIncomingMessage(msg);
-};
-
-socket.onerror = (err) => {
-    console.error("WebSocket error:", err);
-    offlineMode = true;
-    initOfflineData();
-};
-
-socket.onclose = () => {
-    console.warn("WebSocket closed");
-    offlineMode = true;
-};
+connectWebSocket();
 
 /** Method that sends messages in json format via websocket
  * Example slider message:  sendMessage({ type: "slider:update", target: sliderConfig.type, value: sliderValue });
@@ -61,11 +51,87 @@ socket.onclose = () => {
  * @param message
  */
 export function sendMessage(message) {
-    if (socket.readyState === WebSocket.OPEN && !offlineMode) {
+    if (socket && socket.readyState === WebSocket.OPEN && !offlineMode) {
         socket.send(JSON.stringify(message));
-    } else {
+    } else if (offlineMode) {
         handleOfflineMessage(message);
+    } else {
+        console.warn("WebSocket not connected yet. Message ignored until reconnect succeeds.");
     }
+}
+
+function connectWebSocket(isRetry = false) {
+    if (offlineMode) return;
+
+    if (isRetry) {
+        retryAttemptCount += 1;
+        console.log(`Retrying WebSocket connection (attempt ${retryAttemptCount})...`);
+    }
+
+    // try connecting websocket
+    socket = new WebSocket(wsTarget);
+
+    // opens websocket connection
+    socket.onopen = () => {
+        console.log("WebSocket connected");
+        retryAttemptCount = 0;
+    };
+
+    // receives messages from UE
+    socket.onmessage = (event) => {
+        const msg = JSON.parse(event.data);
+        handleIncomingMessage(msg);
+    };
+
+    // error when connecting websocket
+    socket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+    };
+
+    // when closing websocket (e.g. after error)
+    socket.onclose = () => {
+        if (offlineMode) return;
+        console.warn("WebSocket closed");
+        console.log("NOTE: Press 'F' to stop reconnect attempts and switch to offline mode.");
+        scheduleReconnect();
+    };
+}
+
+// method that sets new interval for retry
+function scheduleReconnect() {
+    if (offlineMode) return;
+    if (reconnectTimeout) return;
+
+    reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        connectWebSocket(true);
+    }, RECONNECT_INTERVAL_MS);
+}
+
+// method that tidies up websocket and timeout handlers, and activates offline mode
+function activateOfflineMode() {
+    if (offlineMode) return;
+    offlineMode = true;
+
+    // remove timeout
+    if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+        reconnectTimeout = null;
+    }
+
+    // close websocket
+    if (socket && socket.readyState !== WebSocket.CLOSED) {
+        socket.close();
+    }
+
+    // start using offline data
+    initOfflineData();
+}
+
+function requestOfflineMode() {
+    if (offlineMode) return;
+    console.warn("Reconnect aborted. Switching to offline mode.");
+    activateOfflineMode();
 }
 
 /**

@@ -46,14 +46,15 @@ The Electron app contains a calibration mode for debugging and fine-tuning menu 
 - (For Browser use (Option a) this is not relevant, since there is no underlying application => all keys are always usable)
 
 #### Calibration Keys
-- For Option a changes are persisted in `localStorage` and are reused on next start. For Option b1, b2 the changes are reverted after the session is closed.
+- Changes are persisted in `localStorage` and are reused on next start.
 
+- `f`: Stop WebSocket reconnect attempts and switch to offline mode.
 - `ArrowUp` / `ArrowDown` / `ArrowLeft` / `ArrowRight`: Move menu position in 20px steps.
 - `+` / `-`: Increase/decrease menu radius.
 - `p` / `h`: Increase/decrease `pinchThreshold` by `0.1`.
 - `g` / `b`: Increase/decrease `grabThreshold` by `0.1`.
 - `o` / `m`: Increase/decrease `openPalmThreshold` by `0.1`.
-- `c`: Clear `localStorage` (resets persisted calibration values for Option a => results can be seen after restart only).
+- `c`: Clear `localStorage`: resets persisted calibration values
 
 ## Features
 ### 1. HandDetection:
