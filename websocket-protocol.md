@@ -25,6 +25,7 @@ If you want to connect to another server (instead of the local mock server), set
 ```
 
 Fallback behavior: if `ws-config.json` is missing or invalid, the app uses `ws://localhost:3000`.
+Jump to init details: [Frontend Initialization Expectations](#frontend-initialization-expectations)
 
 ---
 ### Message Structure
@@ -109,3 +110,64 @@ Since the value now is play, it means that this should set the video in a runnin
            <sub>Diagram of how communication between User Interface (UI) and Dummy Server/Unreal Engine would work. Play/Pause is not visualized yet.</sub>
        </div>
    </div>
+
+---
+
+## Frontend Initialization Expectations
+
+The frontend expects an initialization sequence after WebSocket connection.
+To initialize correctly, it needs:
+
+1. one `initial/menu` message with the full menu structure
+2. initial values for controls (for example presentation duration, volume, brightness, vibration)
+
+If these initialization messages are missing, the UI may stay in a non-initialized state and blocks interaction.
+
+### Example Init Messages (as sent by the mock server)
+```json
+{
+  "action": "initial",
+  "type": "menu",
+  "value": menuData (see menu.json)
+}
+```
+
+```json
+{
+  "action": "initial",
+  "type": "slider",
+  "target": "presentation",
+  "value": 750,
+  "id": 21
+}
+```
+
+```json
+{
+  "action": "update",
+  "type": "slider",
+  "target": "volume",
+  "value": 0.3,
+  "id": 11
+}
+```
+
+```json
+{
+  "action": "update",
+  "type": "slider",
+  "target": "brightness",
+  "value": 0.7,
+  "id": 12
+}
+```
+
+```json
+{
+  "action": "update",
+  "type": "slider",
+  "target": "vibration",
+  "value": 0.1,
+  "id": 13
+}
+```
