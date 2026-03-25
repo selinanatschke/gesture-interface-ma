@@ -1,6 +1,5 @@
 const { app, BrowserWindow, globalShortcut, screen } = require('electron')
-const CALIBRATION_MODE_TOGGLE_ACCELERATOR = "F10";
-const DEFAULT_SCREEN_MODE = "all-displays-default";
+const DEFAULT_SCREEN_MODE = "all-displays-default"; // used to see if all screens are enabled (is set in the beginning and not overwritten if no cli parameters are set)
 let calibrationModeEnabled = false;
 let calibrationKeysRegistered = false;
 const windows = new Set(); // saves all open windows + necessary o that all calibration toggles and key shortcuts work for all windows
@@ -22,7 +21,7 @@ const CALIBRATION_KEYS = [
     { accelerators: ["F"], key: "f", message: "Offline mode enabled."}
 ];
 
-// reads arguments from npm command like "--screens=1,2" and "--cams=2,0"
+// reads arguments from npm command like "screens=1,2" and "cams=2,0"
 // result is object like { screens: [1,2], cameraIndices: [2,0] }
 function parseCliArgs(argv) {
     const config = {
@@ -30,36 +29,29 @@ function parseCliArgs(argv) {
         cameraIndices: []
     };
 
-    console.log("argv", argv)
-
-    const parseNonNegativeIntList = (value) => value
+    // splits 1,2 in [1,2]
+    const parseIntList = (value) => value
         .split(",")
         .map((part) => Number.parseInt(part.trim(), 10))
-        .filter((number) => Number.isInteger(number) && number >= 0);
-
-    var args2 = process.argv.slice(2);
-console.log("args2", args2)
 
     argv.forEach((arg) => {
-        console.log("arg", arg)
-        if (!arg.startsWith("--")) return;
+        
+        const [key, value = ""] = arg.split("=");
 
-        const [rawKey, rawValue = ""] = arg.slice(2).split("=");
-        if (!rawKey) return;
-
-        if (rawKey === "screens") {
-            const parsed = parseNonNegativeIntList(rawValue);
-            if (parsed.length > 0) {
+        if (key === "screens") {
+            const parsed = parseIntList(value);
+            if (value.length > 0) {
                 config.screens = parsed;
             }
             return;
         }
 
-        if (rawKey === "cams") {
-            config.cameraIndices = parseNonNegativeIntList(rawValue);
+        if (key === "cams") {
+            config.cameraIndices = parseIntList(value);
         }
     });
 
+    console.log("config", config)
     return config;
 }
 
@@ -84,15 +76,8 @@ function formatCalibrationState(state) {
     return `Current Calibration: position=(${x}, ${y}), radius=${radius}, pinch=${pinch}, grab=${grab}, openPalm=${openPalm}`;
 }
 
-function getOpenWindows() {
-    return [...windows].filter((win) => !win.isDestroyed());
-}
-
 // send information that calibration mode was enabled/disabled to UI
 function notifyRendererCalibrationMode(win) {
-    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) {
-        return;
-    }
 
     // sets JavaScript variable calibrationModeEnabled
     const enabled = Boolean(calibrationModeEnabled);
@@ -106,16 +91,12 @@ function notifyRendererCalibrationMode(win) {
 
 // applies calibration mode => enables/disables mouse events for each window
 function applyCalibrationModeToAllWindows() {
-    getOpenWindows().forEach((win) => {
-        if (!win || win.isDestroyed()) {
-            return;
-        }
-
+    windows.forEach((win) => {
         if (calibrationModeEnabled) {
-            // Calibration mode: interact with full overlay (camera picker etc.)
+            // Calibration mode: interact with full overlay (camera picker etc.); mouse events are not let through to underlying applications
             win.setIgnoreMouseEvents(false);
         } else {
-            // Runtime mode: pass clicks through to underlying apps.
+            // Runtime mode: pass clicks through to underlying apps
             win.setIgnoreMouseEvents(true, { forward: true });
         }
 
@@ -131,19 +112,19 @@ function registerCalibrationKeys() {
 
     CALIBRATION_KEYS.forEach(({ accelerators, key, message }) => {
         accelerators.forEach((accelerator) => {
+
+            // listener for all keys from CALIBRATION_KEYS
             globalShortcut.register(accelerator, async () => {
-                try {
-                    const openWindows = getOpenWindows();
-                    const states = await Promise.allSettled(openWindows.map((win) => triggerDebugControl(win, key)));
-                    states.forEach((entry, index) => {
-                        const stateText = entry.status === "fulfilled"
-                            ? formatCalibrationState(entry.value)
-                            : `Failed: ${entry.reason?.message ?? String(entry.reason)}`;
-                        console.log(`Window ${index}: Key "${key}": ${message}       ${stateText}`);
-                    });
-                } catch (error) {
-                    console.error(`Calibration key "${key}" failed`, error);
-                }
+                // from each window an async call is started to the frontend (e.g. "key x pressed") => waits until all calls are ready + saves promise in states
+                const states = await Promise.allSettled(Array.from(windows).map((win) => triggerDebugControl(win, key)));
+
+                // reads return value from frontend (if key event was executed + all current calibration values from frontend => necessary for userfriendly logging)
+                states.forEach((entry, index) => {
+                    const stateText = entry.status === "fulfilled"
+                        ? formatCalibrationState(entry.value)
+                        : `Failed: ${entry.reason?.message ?? String(entry.reason)}`;
+                    console.log(`Window ${index}: Key "${key}": ${message}       ${stateText}`);
+                });
             });
         });
     });
@@ -160,6 +141,7 @@ function unregisterCalibrationKeys() {
 
     CALIBRATION_KEYS.forEach(({ accelerators }) => {
         accelerators.forEach((accelerator) => {
+            // stops listening for all keys from CALIBRATION_KEYS
             globalShortcut.unregister(accelerator);
         });
     });
@@ -168,11 +150,12 @@ function unregisterCalibrationKeys() {
     console.log("Calibration keys unregistered");
 }
 
-// registers key for enabling/disabling calibration mode and then decides, whether keys must be registered or not
+// registers key for enabling/disabling calibration mode once in the beginning => afterwards application always listenes to F10-key
 function handleKeyRegistration() {
-    console.log(`CalibrationMode ${calibrationModeEnabled ? "ENABLED" : "DISABLED"} (toggle with ${CALIBRATION_MODE_TOGGLE_ACCELERATOR})`);
+    console.log(`CalibrationMode ${calibrationModeEnabled ? "ENABLED" : "DISABLED"} (toggle with F10)`);
 
-    globalShortcut.register(CALIBRATION_MODE_TOGGLE_ACCELERATOR, () => {
+    // F10-key listener (called each time F10 is pressed)
+    globalShortcut.register("F10", () => {
         calibrationModeEnabled = !calibrationModeEnabled;
         console.log(`CalibrationMode ${calibrationModeEnabled ? "ENABLED" : "DISABLED"}`);
         applyCalibrationModeToAllWindows();
@@ -249,10 +232,6 @@ function createWindowForDisplay(display, displayIndex, cameraIndex) {
 
 function createWindowsFromCliConfig(cliConfig) {
     const selectedDisplays = selectDisplays(cliConfig.screens);
-    if (selectedDisplays.length === 0) {
-        console.warn("No displays matched CLI selection, falling back to primary display.");
-        selectedDisplays.push(screen.getPrimaryDisplay());
-    }
 
     selectedDisplays.forEach((display, index) => {
         const cameraIndex = cliConfig.cameraIndices[index];
@@ -265,10 +244,7 @@ function createWindowsFromCliConfig(cliConfig) {
     console.log(`Camera mapping by window index: ${selectedCameras}`);
 }
 
-process.argv.forEach(function (val, index, array) {
-    console.log("CLI ----", index + ': ' + val);
-});
-console.log("TEST ", process.argv.slice(2))
+// note: npm needs command like "npm run start -- screens=0 cams=1" to have "--" in the middle to differentiate npm arguments from custom arguments
 const cliConfig = parseCliArgs(process.argv.slice(2));
 
 /**
@@ -278,13 +254,7 @@ const cliConfig = parseCliArgs(process.argv.slice(2));
  */
 app.whenReady().then(() => {
     handleKeyRegistration();
-    createWindowsFromCliConfig(cliConfig);
-
-    app.on("activate", () => {
-        if (getOpenWindows().length === 0) {
-            createWindowsFromCliConfig(cliConfig);
-        }
-    });
+    createWindowsFromCliConfig(cliConfig); // creates window for normal app start
 });
 
 app.on("will-quit", () => {
