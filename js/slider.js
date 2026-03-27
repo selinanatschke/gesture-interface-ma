@@ -11,7 +11,7 @@ import {
 import { isPinched } from "./gestures.js";
 import { getCurrentState, STATES } from "./timings.js";
 import { sendMessage } from "./websocket.js";
-import { sliderValueStorage } from "./data.js";
+import {sliderValueStorage} from "./data.js";
 
 let sliderConfig = null;
 let sliderValue;        // local slider value
@@ -90,7 +90,7 @@ export function getCurrentUiState() {
 export const sliderState = {
     visible: false,                 // determines whether slider is drawn or not (true if preview or active)
     previewOwner: null,
-    selectedSliderType: null,
+    selectedSliderTarget: null,
     selectedSliderId: null
 };
 
@@ -120,8 +120,8 @@ const SLIDER_META = {
     }
 };
 
-export function openSelectedSlider(selectedSliderType, selectedSliderId){
-    sliderState.selectedSliderType = selectedSliderType;
+export function openSelectedSlider(selectedSliderTarget, selectedSliderId){
+    sliderState.selectedSliderTarget = selectedSliderTarget;
     sliderState.selectedSliderId = selectedSliderId
     sliderState.visible = true;
     sliderState.previewOwner = null;
@@ -138,9 +138,9 @@ export function drawSliderCanvas() {
 
     // determines from sliderConfig if the orientation should be vertical (volume, brightness) or horizontal (vibration)
     if (sliderConfig.orientation === "vertical") {
-        drawVerticalSlider(sliderConfig.type);
+        drawVerticalSlider(sliderConfig.target);
     } else {
-        drawHorizontalSlider(sliderConfig.type);
+        drawHorizontalSlider(sliderConfig.target);
     }
     ctx.globalAlpha = 1;
 }
@@ -148,7 +148,7 @@ export function drawSliderCanvas() {
 /**
  * Draws slider vertically
  */
-function drawVerticalSlider(type) {
+function drawVerticalSlider(target) {
     const layout = VERTICAL_SLIDER_LAYOUT;
     const progress = getSliderValue();
 
@@ -186,7 +186,7 @@ function drawVerticalSlider(type) {
     ctx.font = "24px RobotoCondensed";
     ctx.textAlign = "center";
 
-    if (type === "presentation") {
+    if (target === "presentation") {
         ctx.fillText("Wiedergabe", panelX + layout.panelWidth / 2, panelY + layout.titleTop);
         ctx.fillText(
             "vor-/zurückspulen",
@@ -202,7 +202,7 @@ function drawVerticalSlider(type) {
     }
 
     // type-specific labels
-    if (type === "presentation") {
+    if (target === "presentation") {
         drawPresentationVerticalInfo(trackX, trackY, trackWidth, trackHeight, fillY, layout);
     } else {
         // draw percentage
@@ -232,7 +232,7 @@ function drawPresentationVerticalInfo(trackX, trackY, trackWidth, trackHeight, f
     // draw current time stamp next to progress fill
     ctx.textAlign = "right";
     ctx.fillText(
-        formatMinutes(sliderValueStorage.currentLength),
+        formatMinutes(getSliderValue()*sliderValueStorage.videoLength),
         trackX - layout.currentTimeOffsetX,
         fillY
     );
@@ -316,7 +316,7 @@ function isPreviewOwnerStillHovered(owner) {
 /**
  * Draws slider vertically
  */
-function drawHorizontalSlider(type) {
+function drawHorizontalSlider(target) {
     const layout = HORIZONTAL_SLIDER_LAYOUT;
     const progress = getSliderValue();
 
@@ -338,7 +338,7 @@ function drawHorizontalSlider(type) {
     ctx.font = "24px RobotoCondensed";
     ctx.textAlign = "center";
 
-    if (type === "presentation") {
+    if (target === "presentation") {
         ctx.fillText(
             "Wiedergabe vor-/zurückspulen",
             panelX + layout.panelWidth / 2,
@@ -378,7 +378,7 @@ function drawHorizontalSlider(type) {
     ctx.fillRect(trackX, trackY, fillWidth, trackHeight);
 
     // type-specific labels
-    if (type === "presentation") {
+    if (target === "presentation") {
         drawPresentationHorizontalInfo(trackX, trackY, trackWidth, fillWidth, layout);
     } else {
         drawDefaultHorizontalInfo(trackX, trackY, trackWidth, layout, progress);
@@ -404,7 +404,7 @@ function drawPresentationHorizontalInfo(trackX, trackY, trackWidth, fillWidth, l
     // current time below current fill position
     ctx.textAlign = "center";
     ctx.fillText(
-        formatMinutes(sliderValueStorage.currentLength),
+        formatMinutes(getSliderValue()*sliderValueStorage.videoLength),
         trackX + fillWidth,
         trackY + layout.valueTopOffset
     );
@@ -426,23 +426,23 @@ function formatMinutes(secondsTotal) {
 
 /** Creates a sliderconfig that is used to determine which orientation the slider needs to have, which images are loaded and where to position it
  *
- * @param type
+ * @param target
  * @param id
  */
-export function showSlider(type, id) {
-    const meta = SLIDER_META[type];
+export function showSlider(target, id) {
+    const meta = SLIDER_META[target];
     if (!meta) {
-        console.warn("Unknown slider type:", type);
+        console.warn("Unknown slider target:", target);
         return;
     }
 
     sliderState.visible = true;
 
-    const placement = getSliderPlacementForMainItem(type, id);
+    const placement = getSliderPlacementForMainItem(id);
 
-    // takes type of slider and builds config from it to determine which title, orientation and position the slider has to have
+    // takes target of slider and builds config from it to determine which title, orientation and position the slider has to have
     sliderConfig = {
-        type: type,
+        target: target,
         ...meta,
         orientation: placement.orientation,
         position: placement.position
@@ -485,23 +485,18 @@ export function showSlider(type, id) {
             sliderY = menuPosition.y - outerMenuRadius - sliderAreaHeight - sliderGap;
             break;
     }
-    syncSliderFromData(type, id);
+    syncSliderFromData(target, id);
 }
 
 /** Copies values from data.js in sliderValue
- * @param type
+ * @param target
  * @param id
  */
-export function syncSliderFromData(type, id) {
-    if (type === "presentation") {
-        sliderValue = sliderValueStorage.currentLength/sliderValueStorage.videoLength;
-        return;
-    }
-
+export function syncSliderFromData(target, id) {
     const actionItem = sliderValueStorage.actionItems?.[id];
-    if (!actionItem || actionItem.target !== type) return;
+    if (!actionItem || actionItem.target !== target) return;
 
-    sliderValue = actionItem.value;
+    sliderValue = target === "presentation" ? actionItem.value/sliderValueStorage.videoLength : actionItem.value;
 }
 
 /**
@@ -544,7 +539,8 @@ export function updateSliderValueFromHand(results) {
     }
 
     // limit values
-    sliderValue = Math.min(1, Math.max(0, sliderValue));
+    sliderValue = Math.min(1, Math.max(0, getSliderValue()));
+    sliderValueStorage.actionItems[sliderState.selectedSliderId].value = sliderValueStorage.actionItems[sliderState.selectedSliderId].target === "presentation" ? getSliderValue() * sliderValueStorage.videoLength : getSliderValue();
 
     const now = performance.now();
 
@@ -552,8 +548,8 @@ export function updateSliderValueFromHand(results) {
         sendMessage({
             action: "update",
             type: "slider",
-            target: sliderConfig.type,
-            value: sliderValue,
+            target: sliderConfig.target,
+            value: sliderConfig.target === "presentation" ? getSliderValue() * sliderValueStorage.videoLength : getSliderValue(),
             id: sliderState.selectedSliderId
         });
 
@@ -567,7 +563,7 @@ export function updateSliderValueFromHand(results) {
 export function hideSlider() {
     sliderState.previewOwner = null;
     sliderState.visible = false;
-    sliderState.selectedSliderType = null;
+    sliderState.selectedSliderTarget = null;
     sliderState.selectedSliderId = null;
     lastHandPositionX = null;
     lastHandPositionY = null;
@@ -578,7 +574,7 @@ export function hideSlider() {
  * @param results
  */
 export function updateSlider(results) {
-    if(!sliderState.selectedSliderType && !sliderState.previewOwner) return;
+    if(!sliderState.selectedSliderTarget && !sliderState.previewOwner) return;
 
     // if slider is visible -> wait for gesture and modify values
     if (sliderState.visible && currentUiState === UI_STATES.SLIDER) {
@@ -586,30 +582,30 @@ export function updateSlider(results) {
     }
 
     // if an item with a slider action was already opened and no other slider preview is shown currently, draw slider
-    if(sliderState.selectedSliderType && !sliderState.previewOwner && !sliderState.visible){
-        showSlider(sliderState.selectedSliderType, sliderState.selectedSliderId);    // enables slider
+    if(sliderState.selectedSliderTarget && !sliderState.previewOwner && !sliderState.visible){
+        showSlider(sliderState.selectedSliderTarget, sliderState.selectedSliderId);    // enables slider
     }
 }
 
 /**
  * Enables slider preview
- * @param type
+ * @param target
  * @param owner
  * @param id
  */
-export function showSliderPreview(type, owner, id) {
-    if (!type) return;
+export function showSliderPreview(target, owner, id) {
+    if (!target) return;
 
-    sliderState.selectedSliderType = type;
+    sliderState.selectedSliderTarget = target;
     sliderState.selectedSliderId = id;
 
-    showSlider(type, id);
+    showSlider(target, id);
     setCurrentUiState(UI_STATES.MENU)
     sliderState.previewOwner = owner
 }
 
 /**
- * Method that returns slider value for the correct slider type.
+ * Method that returns slider value
  * @returns {*|number}
  */
 function getSliderValue() {
@@ -619,15 +615,13 @@ function getSliderValue() {
         return sliderValue;
     }
 
-    if (sliderConfig.type === "presentation") {
-        return sliderValueStorage.videoLength
-            ? sliderValueStorage.currentLength / sliderValueStorage.videoLength
-            : 0;
-    }
-
     const id = sliderState.selectedSliderId;
-    const entry = id != null ? sliderValueStorage.actionItems?.[id] : null;
-    return entry && entry.target === sliderConfig.type ? entry.value : 0;
+
+    if (sliderValueStorage.actionItems?.[id].target === "presentation"){
+        return sliderValueStorage.actionItems?.[id].value/sliderValueStorage.videoLength;
+    }
+    const entry = id != null ? sliderValueStorage.actionItems?.[id] : 0;
+    return entry && entry.target === sliderConfig.target ? entry.value : 0;
 }
 
 function drawRoundedRect(x, y, width, height, radius) {

@@ -20,14 +20,14 @@ console.log(`Mock Unreal WebSocket Server running on ws://localhost:${PORT}`);
 
 let videoState = {
     duration: 750,      // seconds (12:30)
-    currentTime: 0,
     playing: false
 };
 
 let uiState = {
     volume: 0.3,
     brightness: 0.7,
-    vibration: 0.1
+    vibration: 0.1,
+    presentation: 0
 };
 
 /**
@@ -96,17 +96,17 @@ wss.on("connection", (ws) => {
      */
     setInterval(() => {
         if (videoState.playing) {
-            videoState.currentTime += 0.033; // ~30 fps
+            uiState.presentation += 0.033; // ~30 fps
 
-            if (videoState.currentTime > videoState.duration) {
-                videoState.currentTime = videoState.duration;
+            if (uiState.presentation > videoState.duration) {
+                uiState.presentation = videoState.duration;
                 videoState.playing = false;
             }
             ws.send(JSON.stringify({
                 action: "update",
                 type: "slider",
                 target: "presentation",
-                value: videoState.currentTime,
+                value: uiState.presentation,
                 id: 21
             }));
         }
@@ -119,13 +119,6 @@ wss.on("connection", (ws) => {
  * @param ws
  */
 function handleSliderUpdate(msg, ws) {
-    let returnValue;
-    if (msg.target === "presentation") {
-        videoState.currentTime = msg.value * videoState.duration/60;
-        returnValue = msg.value * videoState.duration/60;
-    } else {
-        returnValue = msg.value;
-    }
 
     // for volume, brightness, vibration
     uiState[msg.target] = msg.value;
@@ -134,7 +127,7 @@ function handleSliderUpdate(msg, ws) {
         action: "update",
         type: "slider",
         target: msg.target,
-        value: returnValue,
+        value: msg.value,
         id: msg.id
     }));
 }

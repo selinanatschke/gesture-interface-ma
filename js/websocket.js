@@ -46,7 +46,7 @@ window.addEventListener("force-offline-mode", requestOfflineMode);
 connectWebSocket();
 
 /** Method that sends messages in json format via websocket
- * Example slider message:  sendMessage({ type: "slider:update", target: sliderConfig.type, value: sliderValue });
+ * Example slider message:  sendMessage({ type: "slider:update", target: sliderConfig.target, value: sliderValue });
  * Example pause/play:      sendMessage({ type: "presentation:command", action: "play" });
  * @param message
  */
@@ -145,7 +145,7 @@ function handleOfflineMessage(msg) {
     if (msg.action === "update" && msg.type === "slider") {
 
         if (msg.target === "presentation") {
-            const seconds = msg.value * offlinePlayback.duration;
+            const seconds = msg.value;
             offlinePlayback.currentTime = seconds;
 
             handleDataUpdate({
@@ -210,7 +210,7 @@ function sendOfflineInitialMessages(items) {
                 action: "initial",
                 type: "slider",
                 target: item.target,
-                value,
+                value: value,
                 id: item.id
             });
             continue;
@@ -284,7 +284,7 @@ function handleIncomingMessage(msg) {
     // inital message that sends total video length in seconds and sets currentTime to 0
     if (msg.action === "initial" && msg.type === "slider") {
         if (msg.target === "presentation") {
-            handleInitialData(msg.value);
+            handleInitialData(msg);
             return;
         }
 

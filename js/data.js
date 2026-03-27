@@ -8,12 +8,17 @@ export const sliderValueStorage = {
 };
 
 /**
- * When UE sends presentation data, it is saved in videoLength and currentLength
- * @param totalVideoLength
+ * When UE sends presentation data, it is saved in videoLength and presentation action item (current length = 0)
+ * @param msg
  */
-export function handleInitialData(totalVideoLength){
-    sliderValueStorage.videoLength = totalVideoLength;  // seconds
-    sliderValueStorage.currentLength = 0;               // seconds
+export function handleInitialData(msg){
+    sliderValueStorage.videoLength = msg.value;  // seconds
+    // save currentLength with 0
+    handleDataUpdate({
+        target: msg.target,
+        value: 0,
+        id: msg.id
+    });
 }
 
 /**
@@ -21,20 +26,6 @@ export function handleInitialData(totalVideoLength){
  * @param msg
  */
 export function handleDataUpdate(msg){
-    if (msg.target === "presentation") {
-        sliderValueStorage.currentLength = msg.value;
-
-        // If playback reached the end, force paused state in UI model.
-        if (
-            sliderValueStorage.videoLength > 0 &&
-            sliderValueStorage.currentLength >= sliderValueStorage.videoLength
-        ) {
-            sliderValueStorage.currentLength = sliderValueStorage.videoLength;
-            sliderValueStorage.isPlaying = false;
-        }
-        return;
-    }
-
     if (msg.id == null) {
         console.warn("Slider update without id:", msg);
         return;
@@ -44,4 +35,14 @@ export function handleDataUpdate(msg){
         target: msg.target,
         value: msg.value
     };
+
+    if (msg.target === "presentation") {
+        // If playback reached the end, force paused state in UI model.
+        if (
+            sliderValueStorage.videoLength > 0 &&
+            msg.value >= sliderValueStorage.videoLength
+        ) {
+            sliderValueStorage.isPlaying = false;
+        }
+    }
 }

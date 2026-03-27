@@ -283,7 +283,7 @@ export function drawMarkingMenu() {
     drawCenterSettingsIcon(mainInnerRadius);
 
     // draw submenu if cursor is hovering over selected main segment OR slider is visible OR cursor is in submenu ring
-    if(interactionState.levels[0].selected === interactionState.levels[0].hover || sliderState.selectedSliderType !== null || isCursorInSubMenuRing()){
+    if(interactionState.levels[0].selected === interactionState.levels[0].hover || sliderState.selectedSliderTarget !== null || isCursorInSubMenuRing()){
         // draw submenu if a main menu segment is selected AND ((Cursor is in menu OR slider is visible) OR Cursor is in submenuring)
         if (stateItemIsSet(interactionState.levels[0].selected)) {
             // draws submenus recursively
@@ -460,13 +460,17 @@ function doActionOrHandleNavigation(selectedItem){
     if(selectedItem.type === "button"){
         if(selectedItem.target === "presentation"){
             const nextPlaybackValue = sliderValueStorage.isPlaying ? "pause" : "play";
+            sliderValueStorage.isPlaying = !sliderValueStorage.isPlaying; // update locally
+
+            // TODO this should be simplified in the future - i only do it like this because i know there is only one presentation slider. E.g. save if specifically in the first place.
+            const presentationSliderValueId = Object.entries(sliderValueStorage.actionItems).find(item => item[1].target === "presentation")[0]
             const playbackAtEnd =
                 sliderValueStorage.videoLength > 0 &&
-                sliderValueStorage.currentLength >= sliderValueStorage.videoLength - 0.001;
+                sliderValueStorage.actionItems[presentationSliderValueId].value >= sliderValueStorage.videoLength  - 0.01;
 
             // If user presses play at end of video, restart from beginning first.
             if (nextPlaybackValue === "play" && playbackAtEnd) {
-                sliderValueStorage.currentLength = 0;
+                sliderValueStorage.actionItems[presentationSliderValueId].value = 0;
                 sendMessage({
                     action: "update",
                     type: "slider",
@@ -693,11 +697,10 @@ function loadIcon(iconName, src = `./images/label-icons/${iconName}.png`){
 
 /**
  * helps determine how and where to display the sliders
- * @param type
  * @param id
  * @returns {{position: string, orientation: string}}
  */
-export function getSliderPlacementForMainItem(type, id) {
+export function getSliderPlacementForMainItem(id) {
     // get main item that opened slider type
     let mainItemIndexThatOpenedSlider = interactionState.levels[0]?.selected;
 
